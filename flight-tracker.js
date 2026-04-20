@@ -95,12 +95,16 @@ function renderFlightOnMap(flight) {
     flight.routeLine = L.polyline(flight.routePts, { color: 'rgba(34,211,238,0.3)', weight: 2, dashArray: '10 8' }).addTo(map);
   }
 
+  // Origin airport marker + geofence
   L.circleMarker([flight.origin.lat, flight.origin.lon], { radius: 5, color: '#f59e0b', fillColor: '#f59e0b', fillOpacity: 0.7, weight: 1 })
     .addTo(map).bindPopup(`<div class="cp-popup"><div class="cp-popup-type" style="color:#f59e0b">ORIGIN</div><div class="cp-popup-desc">${flight.origin.name}</div></div>`);
+  L.circle([flight.origin.lat, flight.origin.lon], { radius: GEOFENCE_RADIUS_KM * 1000, color: '#f59e0b', fillColor: '#f59e0b', fillOpacity: 0.03, weight: 1.5, dashArray: '8 6', interactive: false }).addTo(map);
 
+  // Destination airport marker + geofence
   if (flight.dest.lat && flight.dest.lon) {
     L.circleMarker([flight.dest.lat, flight.dest.lon], { radius: 5, color: '#34d399', fillColor: '#34d399', fillOpacity: 0.7, weight: 1 })
       .addTo(map).bindPopup(`<div class="cp-popup"><div class="cp-popup-type" style="color:#34d399">DESTINATION</div><div class="cp-popup-desc">${flight.dest.name}</div></div>`);
+    L.circle([flight.dest.lat, flight.dest.lon], { radius: GEOFENCE_RADIUS_KM * 1000, color: '#34d399', fillColor: '#34d399', fillOpacity: 0.03, weight: 1.5, dashArray: '8 6', interactive: false }).addTo(map);
   }
 
   if (flight.routePts && flight.routePts.length > 1) {
@@ -123,20 +127,25 @@ function renderFlightOnMap(flight) {
 function openFlightSidebar(flight) {
   const color = '#22d3ee';
   const pct = flight.totalDistanceKm > 0 ? Math.min(100, Math.round((haversineDist(flight.origin.lat, flight.origin.lon, flight.currentLat || flight.origin.lat, flight.currentLon || flight.origin.lon) / flight.totalDistanceKm) * 100)) : 0;
-  const statusLabel = flight.status === 'completed' ? 'ARRIVED' : flight.onGround === false ? 'AIRBORNE' : 'ON GROUND';
-  const statusColor = flight.status === 'completed' ? '#34d399' : flight.onGround === false ? '#60a5fa' : '#f59e0b';
+  const distFromOrigin = haversineDist(flight.origin.lat, flight.origin.lon, flight.currentLat, flight.currentLon);
+  const insideOriginFence = distFromOrigin < GEOFENCE_RADIUS_KM;
+  const statusLabel = flight.status === 'completed' ? 'ARRIVED' : !flight.checkpointsFired.departure ? (insideOriginFence ? 'AT GATE' : 'DEPARTED') : 'EN ROUTE';
+  const statusColor = flight.status === 'completed' ? '#34d399' : insideOriginFence ? '#f59e0b' : '#60a5fa';
   const altFt = flight.currentAlt ? Math.round(flight.currentAlt * 3.28084).toLocaleString() : '—';
   const speedKts = flight.currentSpeed ? Math.round(flight.currentSpeed * 0.54) : '—';
   const pollInterval = getPollIntervalMs(flight);
   const pollLabel = pollInterval >= 45 * 60 * 1000 ? '45min (long haul)' : '5min (short haul)';
 
-  const cpKeys = ['created', 'departure', 'midpoint', 'arrival'];
-  const cpLabels = { created: 'CREATED', departure: 'DEPARTURE', midpoint: 'MIDPOINT', arrival: 'ARRIVAL' };
-  const cpColors = { created: '#f59e0b', departure: '#60a5fa', midpoint: '#a78bfa', arrival: '#34d399' };
-  const cpHtml = cpKeys.map(key => {
-    const cp = flight.checkpointsFired[key];
-    if (!cp || cp.pending) return `<div class="ops-sid-cp" style="opacity:0.3"><div class="ops-sid-cp-icon" style="background:rgba(255,255,255,0.03);color:var(--dim);border:1px solid rgba(255,255,255,0.06);">—</div><div class="ops-sid-cp-info"><div class="ops-sid-cp-type" style="color:rgba(255,255,255,0.25)">${cpLabels[key]}</div><div class="ops-sid-cp-desc">Pending</div></div></div>`;
-    return `<div class="ops-sid-cp"><div class="ops-sid-cp-icon" style="background:${cpColors[key]}15;color:${cpColors[key]};border:1px solid ${cpColors[key]}33;">&#10003;</div><div class="ops-sid-cp-info"><div class="ops-sid-cp-type" style="color:${cpColors[key]}">${cpLabels[key]}</div><div class="ops-sid-cp-desc">Anchored on-chain</div>${cp.txHash ? `<div class="ops-sid-cp-tx"><a href="https://sepolia.basescan.org/tx/${cp.txHash}" target="_blank">TX: ${cp.txHash.slice(0,14)}...${cp.txHash.slice(-6)}</a></div>` : ''}</div></div>`;
+  const cpDefs = [
+    { key: 'created', label: 'REGISTERED', desc: 'Shipment created on-chain', pending: 'Awaiting commit', color: '#f59e0b', icon: '⊕' },
+    { key: 'departure', label: 'GEOFENCE EXIT', desc: `Exited ${flight.origin.name} (${GEOFENCE_RADIUS_KM}km radius)`, pending: 'Waiting for departure', color: '#60a5fa', icon: '↗' },
+    { key: 'midpoint', label: 'MIDPOINT', desc: '50% route distance crossed', pending: 'En route to midpoint', color: '#a78bfa', icon: 'M' },
+    { key: 'arrival', label: 'GEOFENCE ENTRY', desc: `Entered ${flight.dest.name} (${GEOFENCE_RADIUS_KM}km radius)`, pending: 'En route to destination', color: '#34d399', icon: '↘' },
+  ];
+  const cpHtml = cpDefs.map(def => {
+    const cp = flight.checkpointsFired[def.key];
+    if (!cp || cp.pending) return `<div class="ops-sid-cp" style="opacity:0.3"><div class="ops-sid-cp-icon" style="background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.06)">${def.icon}</div><div class="ops-sid-cp-info"><div class="ops-sid-cp-type" style="color:rgba(255,255,255,0.25)">${def.label}</div><div class="ops-sid-cp-desc">${def.pending}</div></div></div>`;
+    return `<div class="ops-sid-cp"><div class="ops-sid-cp-icon" style="background:${def.color}15;color:${def.color};border:1px solid ${def.color}33">${def.icon}</div><div class="ops-sid-cp-info"><div class="ops-sid-cp-type" style="color:${def.color}">${def.label}</div><div class="ops-sid-cp-desc">${def.desc}</div>${cp.txHash ? `<div class="ops-sid-cp-tx"><a href="https://sepolia.basescan.org/tx/${cp.txHash}" target="_blank">TX: ${cp.txHash.slice(0,14)}...${cp.txHash.slice(-6)}</a></div>` : ''}</div></div>`;
   }).join('');
 
   document.getElementById('opsSidebarContent').innerHTML = `
@@ -196,10 +205,11 @@ async function pollFlight(flight) {
     const d = await res.json();
     if (!d.flight || d.status === 'not_found') {
       consecutiveMisses[flight.flightIata] = (consecutiveMisses[flight.flightIata] || 0) + 1;
-      if (consecutiveMisses[flight.flightIata] >= 3 && !flight.checkpointsFired.arrival && flight.checkpointsFired.departure) {
+      // Flight disappeared from live feed — if near destination geofence, trigger arrival
+      if (consecutiveMisses[flight.flightIata] >= 3 && !flight.checkpointsFired.arrival && flight.checkpointsFired.departure && flight.dest.lat) {
         const distToDest = haversineDist(flight.currentLat, flight.currentLon, flight.dest.lat, flight.dest.lon);
-        if (distToDest < 100) {
-          await fireFlightCheckpoint(flight, 'arrival', 14, flight.dest.lat, flight.dest.lon, flight.dest.name + ' Arrival');
+        if (distToDest < GEOFENCE_RADIUS_KM * 3) {
+          await fireFlightCheckpoint(flight, 'arrival', 14, flight.currentLat, flight.currentLon, flight.dest.name + ' Geofence Entry (signal lost)');
           await updateFlightStatus(flight, 'completed', { arrived_at: new Date().toISOString() });
         }
       }
@@ -233,27 +243,31 @@ async function pollFlight(flight) {
   } catch (e) { console.warn('pollFlight error:', e); }
 }
 
-// ── CHECKPOINT EVALUATOR ──
+// ── GEOFENCE CHECKPOINT EVALUATOR ──
+const GEOFENCE_RADIUS_KM = 15;
+
 async function evaluateCheckpoints(flight) {
-  if (!flight.checkpointsFired.departure && !flight.onGround && flight.currentAlt > 300) {
-    await fireFlightCheckpoint(flight, 'departure', 13, flight.currentLat, flight.currentLon, flight.origin.name + ' Departure');
+  const distFromOrigin = haversineDist(flight.origin.lat, flight.origin.lon, flight.currentLat, flight.currentLon);
+  const distFromDest = flight.dest.lat ? haversineDist(flight.dest.lat, flight.dest.lon, flight.currentLat, flight.currentLon) : Infinity;
+
+  // DEPARTURE: flight exits the origin airport geofence
+  if (!flight.checkpointsFired.departure && distFromOrigin > GEOFENCE_RADIUS_KM) {
+    await fireFlightCheckpoint(flight, 'departure', 13, flight.currentLat, flight.currentLon, flight.origin.name + ' Geofence Exit');
     await updateFlightStatus(flight, 'airborne', { departed_at: new Date().toISOString() });
   }
 
+  // MIDPOINT: crosses 50% of the great-circle route distance
   if (!flight.checkpointsFired.midpoint && flight.checkpointsFired.departure && flight.totalDistanceKm > 0) {
-    const dist = haversineDist(flight.origin.lat, flight.origin.lon, flight.currentLat, flight.currentLon);
-    if (dist >= flight.totalDistanceKm * 0.5) {
+    if (distFromOrigin >= flight.totalDistanceKm * 0.5) {
       await fireFlightCheckpoint(flight, 'midpoint', 17, flight.currentLat, flight.currentLon, 'Mid-Route Position');
       await updateFlightStatus(flight, 'midpoint_passed');
     }
   }
 
-  if (!flight.checkpointsFired.arrival && flight.checkpointsFired.departure && (flight.onGround || flight.currentAlt < 100)) {
-    const distToDest = haversineDist(flight.currentLat, flight.currentLon, flight.dest.lat, flight.dest.lon);
-    if (distToDest < 80) {
-      await fireFlightCheckpoint(flight, 'arrival', 14, flight.dest.lat, flight.dest.lon, flight.dest.name + ' Arrival');
-      await updateFlightStatus(flight, 'completed', { arrived_at: new Date().toISOString() });
-    }
+  // ARRIVAL: flight enters the destination airport geofence
+  if (!flight.checkpointsFired.arrival && flight.checkpointsFired.departure && distFromDest < GEOFENCE_RADIUS_KM) {
+    await fireFlightCheckpoint(flight, 'arrival', 14, flight.currentLat, flight.currentLon, flight.dest.name + ' Geofence Entry');
+    await updateFlightStatus(flight, 'completed', { arrived_at: new Date().toISOString() });
   }
 }
 
