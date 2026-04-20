@@ -11,7 +11,7 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Inter', system-ui, sans-serif; background: #050510; color: #fff; height: 100vh; overflow: hidden; -webkit-font-smoothing: antialiased; }
 
-.shell { display: grid; grid-template-columns: 1fr; grid-template-rows: 44px 44px 1fr 64px; height: 100vh; }
+.shell { display: grid; grid-template-columns: 1fr; grid-template-rows: 44px 1fr 64px; height: calc(100vh - 44px); }
 
 /* ── HEADER ── */
 .ops-header { display: flex; align-items: center; justify-content: space-between; padding: 0 1.25rem; background: rgba(8,8,20,0.95); border-bottom: 1px solid rgba(255,255,255,0.04); z-index: 10; }
@@ -104,9 +104,9 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #050510; color: 
 </style>
 </head>
 <body>
+<div id="nav-mount"></div>
+<script src="./nav.js"></script>
 <div class="shell">
-  <div id="nav-mount"></div>
-  <script src="./nav.js"></script>
   <div class="ops-header">
     <div class="ops-brand">
       <img src="./assets/logos/ibs_mark_only.svg" alt="" class="ops-brand-icon">
