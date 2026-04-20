@@ -200,8 +200,6 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #050510; color: 
 const SB_SIM = 'https://jtifhcvbgxqwlywugvjv.supabase.co/functions/v1/logistix-simulate';
 const OWM_KEY = '7de9278c6029196f13803f6bee90871e';
 const ORS_KEY = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjlmMjZiNDMwMzllNjQxNGI5MTE2ZWNhZGZiZDlkYWMwIiwiaCI6Im11cm11cjY0In0=';
-const OPENSKY_ID = 'ibslasvegas-api-client';
-const OPENSKY_SECRET = 'ceE8G2CzH8WeegnTHJnb7wSowU5Czkb9';
 const CARGO_PREFIXES = ['FDX','UPS','GTI','CLX','BOX','GEC','CAL','KAL','EVA','SIA','CKS','ABW','ATN','5Y'];
 const CONTRACT = '0x289ee93a1717fbef60add4f630ed8356b7a7e8d3';
 
@@ -359,23 +357,24 @@ function openSidebar(s) {
 
 function closeSidebar() { document.getElementById('opsSidebar').classList.remove('open'); }
 
-// ── LAS DEPARTURES OVERLAY ──
+// ── LAS DEPARTURES OVERLAY (via Airlabs proxy) ──
+const PROXY_URL = 'https://logistix-opensky-proxy.vercel.app/api/opensky';
+
 async function loadCargoFlights() {
   if (!layers.flights) return;
   clearFlightMarkers();
   try {
-    const res = await fetch(`${SB_URL}/functions/v1/logistix-opensky?action=scan&airport=KLAS`);
+    const res = await fetch(`${PROXY_URL}?action=scan&dep_iata=LAS`);
     if (!res.ok) return;
     const d = await res.json();
     if (!d.departures || d.departures.length === 0) return;
 
     d.departures.forEach(f => {
-      if (!f.lat || !f.lon || !f.callsign) return;
-      const color = f.on_ground ? 'rgba(245,158,11,0.5)' : 'rgba(96,165,250,0.5)';
-      const icon = f.on_ground ? '◆' : '✈';
-      const rot = !f.on_ground && f.heading ? `transform:rotate(${f.heading}deg)` : '';
-      const label = f.on_ground ? 'GATE' : (f.alt ? Math.round(f.alt * 3.28084 / 1000) + 'kft' : '');
-      const m = L.marker([f.lat, f.lon], { icon: L.divIcon({ className: '', html: `<div style="text-align:center;"><div style="font-size:12px;${rot};color:${color};">${icon}</div><div style="font-size:7px;color:${color};font-family:monospace;">${f.callsign} ${label}</div></div>`, iconSize: [80, 24], iconAnchor: [40, 12] }) }).addTo(map);
+      if (!f.lat || !f.lon || !f.flight_iata) return;
+      const rot = f.heading ? `transform:rotate(${f.heading}deg)` : '';
+      const altKft = f.alt ? Math.round(f.alt * 3.28084 / 1000) : 0;
+      const dest = f.arr_iata || '?';
+      const m = L.marker([f.lat, f.lon], { icon: L.divIcon({ className: '', html: `<div style="text-align:center;"><div style="font-size:12px;${rot};color:rgba(96,165,250,0.5);">✈</div><div style="font-size:7px;color:rgba(96,165,250,0.4);font-family:monospace;">${f.flight_iata}→${dest} ${altKft}kft</div></div>`, iconSize: [100, 24], iconAnchor: [50, 12] }) }).addTo(map);
       flightMarkers.push(m);
     });
   } catch (e) { console.warn('LAS overlay:', e); }
