@@ -224,7 +224,9 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #050510; color: 
 </div>
 
 <script>
-const SB_SIM = 'https://jtifhcvbgxqwlywugvjv.supabase.co/functions/v1/logistix-simulate';
+const SB_URL = 'https://jtifhcvbgxqwlywugvjv.supabase.co';
+const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0aWZoY3ZiZ3hxd2x5d3Vndmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1MDc5NTgsImV4cCI6MjA4ODA4Mzk1OH0.UfRVLuvM8_HPvKXUEDXb0cxR50znv16L5Tf99AnSc7g';
+const SB_SIM = SB_URL + '/functions/v1/logistix-simulate';
 const OWM_KEY = '7de9278c6029196f13803f6bee90871e';
 const ORS_KEY = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjlmMjZiNDMwMzllNjQxNGI5MTE2ZWNhZGZiZDlkYWMwIiwiaCI6Im11cm11cjY0In0=';
 const CARGO_PREFIXES = ['FDX','UPS','GTI','CLX','BOX','GEC','CAL','KAL','EVA','SIA','CKS','ABW','ATN','5Y'];
@@ -452,9 +454,7 @@ function bearing(lat1, lon1, lat2, lon2) {
 }
 
 // ── EASYPOST TRACKED SHIPMENTS ──
-const SB_TRACK = 'https://jtifhcvbgxqwlywugvjv.supabase.co/functions/v1/logistix-track-create';
-const SB_URL = 'https://jtifhcvbgxqwlywugvjv.supabase.co';
-const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0aWZoY3ZiZ3hxd2x5d3Vndmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1MDc5NTgsImV4cCI6MjA4ODA4Mzk1OH0.UfRVLuvM8_HPvKXUEDXb0cxR50znv16L5Tf99AnSc7g';
+const SB_TRACK = SB_URL + '/functions/v1/logistix-track-create';
 const MAPBOX_GEO = 'pk.eyJ1IjoiaWJzLWxhc3ZlZ2FzIiwiYSI6ImNtbzZkdGZxeDE2MXAzd3BzZ2J5Y2htd2kifQ.onTZvAwslI9vJ7xwgmxzIg';
 
 let trackedShipments = [];
