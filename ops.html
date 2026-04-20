@@ -137,9 +137,16 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #050510; color: 
 </style>
 </head>
 <body>
+<script type="module">
+  import { authGuard } from './auth.js';
+  const user = await authGuard();
+  if (!user) throw new Error('redirect');
+  document.getElementById('shell').style.display = '';
+</script>
+
 <div id="nav-mount"></div>
 <script src="./nav.js"></script>
-<div class="shell">
+<div class="shell" id="shell" style="display:none">
   <div class="ops-header">
     <div class="ops-brand">
       <img src="./assets/logos/ibs_mark_only.svg" alt="" class="ops-brand-icon">

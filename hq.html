@@ -164,10 +164,17 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
 </head>
 <body>
 
+<script type="module">
+  import { authGuard } from './auth.js';
+  const user = await authGuard();
+  if (!user) throw new Error('redirect');
+  document.getElementById('shell').style.display = '';
+</script>
+
 <div id="nav-mount"></div>
 <script src="./nav.js"></script>
 
-<div class="shell">
+<div class="shell" id="shell" style="display:none">
   <!-- KPI STRIP -->
   <div class="kpi">
     <div class="kpi-cell"><span class="kpi-val" style="color:var(--blue)" id="kActive">0</span><span class="kpi-label">Active</span></div>

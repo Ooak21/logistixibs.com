@@ -264,17 +264,21 @@ async function evaluateCheckpoints(flight) {
   }
 
   // MIDPOINT: crosses 50% of the great-circle route distance
-  if (!flight.checkpointsFired.midpoint && flight.checkpointsFired.departure && flight.totalDistanceKm > 0) {
+  if ((!flight.checkpointsFired.midpoint || flight.checkpointsFired.midpoint.pending) && flight.checkpointsFired.departure && flight.totalDistanceKm > 0) {
     if (distFromOrigin >= flight.totalDistanceKm * 0.5) {
       await fireFlightCheckpoint(flight, 'midpoint', 17, flight.currentLat, flight.currentLon, 'Mid-Route Position');
-      await updateFlightStatus(flight, 'midpoint_passed');
+      if (flight.checkpointsFired.midpoint && !flight.checkpointsFired.midpoint.pending) {
+        await updateFlightStatus(flight, 'midpoint_passed');
+      }
     }
   }
 
   // ARRIVAL: flight enters the destination airport geofence
-  if (!flight.checkpointsFired.arrival && flight.checkpointsFired.departure && distFromDest < GEOFENCE_RADIUS_KM) {
+  if ((!flight.checkpointsFired.arrival || flight.checkpointsFired.arrival.pending) && flight.checkpointsFired.departure && distFromDest < GEOFENCE_RADIUS_KM) {
     await fireFlightCheckpoint(flight, 'arrival', 14, flight.currentLat, flight.currentLon, flight.dest.name + ' Geofence Entry');
-    await updateFlightStatus(flight, 'completed', { arrived_at: new Date().toISOString() });
+    if (flight.checkpointsFired.arrival && !flight.checkpointsFired.arrival.pending) {
+      await updateFlightStatus(flight, 'completed', { arrived_at: new Date().toISOString() });
+    }
   }
 }
 
