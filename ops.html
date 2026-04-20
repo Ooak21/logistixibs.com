@@ -115,6 +115,20 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #050510; color: 
 .orp-item-chain a { color: #60a5fa; text-decoration: none; }
 .orp-section { font-size: 0.4rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; color: rgba(255,255,255,0.6); padding: 0.5rem 0.75rem 0.25rem; }
 
+/* ── CORTEX CHAT ── */
+.orp-cortex { border-top: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; height: 240px; flex-shrink: 0; }
+.orp-cortex-header { display: flex; align-items: center; padding: 0.4rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.04); flex-shrink: 0; }
+.orp-cortex-messages { flex: 1; overflow-y: auto; padding: 0.4rem 0.6rem; display: flex; flex-direction: column; gap: 0.35rem; }
+.orp-cortex-messages .cmsg { max-width: 95%; padding: 0.4rem 0.6rem; border-radius: 6px; font-size: 0.55rem; line-height: 1.6; color: #fff; white-space: pre-wrap; word-break: break-word; }
+.orp-cortex-messages .cmsg.user { background: #2563eb; align-self: flex-end; }
+.orp-cortex-messages .cmsg.assistant { background: rgba(255,255,255,0.06); align-self: flex-start; color: rgba(255,255,255,0.9); }
+.orp-cortex-input { display: flex; gap: 0.3rem; padding: 0.4rem 0.6rem; border-top: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
+.orp-cortex-input input { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 5px; padding: 0.35rem 0.5rem; color: #fff; font-size: 0.55rem; font-family: 'Inter', sans-serif; outline: none; }
+.orp-cortex-input input:focus { border-color: rgba(52,211,153,0.4); }
+.orp-cortex-input input::placeholder { color: rgba(255,255,255,0.25); }
+.orp-cortex-input button { padding: 0.35rem 0.6rem; background: #34d399; color: #000; border: none; border-radius: 5px; font-size: 0.55rem; font-weight: 700; cursor: pointer; }
+.orp-cortex-input button:hover { background: #4ade80; }
+
 /* ── CONTROLS ── */
 .ops-controls { position: absolute; bottom: 16px; left: 1rem; z-index: 500; display: flex; flex-direction: column; gap: 0.4rem; }
 .ops-ctrl-btn { padding: 0.4rem 0.7rem; background: rgba(8,8,20,0.9); border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; color: rgba(255,255,255,0.5); font-size: 0.55rem; font-weight: 600; cursor: pointer; transition: all 0.3s; white-space: nowrap; }
@@ -189,6 +203,19 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #050510; color: 
     <div class="orp-list" id="orpList">
       <div class="orp-empty">No active shipments.<br>Track a carrier package above or commit a live flight.</div>
     </div>
+    <div class="orp-cortex">
+      <div class="orp-cortex-header">
+        <span style="color:#34d399;font-size:5px;margin-right:4px;">&#9679;</span>
+        <span class="orp-title" style="margin:0">CORTEX</span>
+      </div>
+      <div class="orp-cortex-messages" id="cortexMessages">
+        <div style="font-size:0.5rem;color:rgba(255,255,255,0.4);padding:0.5rem;text-align:center;">Ask about any flight or shipment</div>
+      </div>
+      <div class="orp-cortex-input">
+        <input id="cortexInput" placeholder="Ask CORTEX..." onkeydown="if(event.key==='Enter')sendCortexQuery()">
+        <button onclick="sendCortexQuery()">&#9654;</button>
+      </div>
+    </div>
   </div>
 
   <div class="ops-feed" id="opsFeed">
@@ -202,6 +229,40 @@ const OWM_KEY = '7de9278c6029196f13803f6bee90871e';
 const ORS_KEY = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjlmMjZiNDMwMzllNjQxNGI5MTE2ZWNhZGZiZDlkYWMwIiwiaCI6Im11cm11cjY0In0=';
 const CARGO_PREFIXES = ['FDX','UPS','GTI','CLX','BOX','GEC','CAL','KAL','EVA','SIA','CKS','ABW','ATN','5Y'];
 const CONTRACT = '0x289ee93a1717fbef60add4f630ed8356b7a7e8d3';
+const SB_CORTEX = SB_URL + '/functions/v1/logistix-cortex';
+
+// ── CORTEX CHAT ──
+async function sendCortexQuery() {
+  const input = document.getElementById('cortexInput');
+  const messages = document.getElementById('cortexMessages');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+
+  const userBubble = document.createElement('div');
+  userBubble.className = 'cmsg user';
+  userBubble.textContent = msg;
+  messages.appendChild(userBubble);
+
+  const loadBubble = document.createElement('div');
+  loadBubble.className = 'cmsg assistant';
+  loadBubble.textContent = 'Analyzing...';
+  messages.appendChild(loadBubble);
+  messages.scrollTop = messages.scrollHeight;
+
+  try {
+    const res = await fetch(SB_CORTEX, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg }),
+    });
+    const data = await res.json();
+    loadBubble.textContent = data.response || 'No response.';
+  } catch (e) {
+    loadBubble.textContent = 'Error: ' + e.message;
+  }
+  messages.scrollTop = messages.scrollHeight;
+}
 
 const map = L.map('opsMap', { zoomControl: false, minZoom: 2 }).setView([25, 0], 3);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);

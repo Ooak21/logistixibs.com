@@ -664,7 +664,11 @@ function openCortexDrawer() {
   document.querySelectorAll('.dtab').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.dtab')[2].classList.add('active');
   const body = document.getElementById('detailBody');
-  body.innerHTML = '<div class="cortex-box"><div class="cortex-box-label">CORTEX Fleet Briefing</div><div class="cortex-box-text" id="cortexInsight">Generating full briefing...</div></div>';
+  body.innerHTML = `<div class="cortex-box"><div class="cortex-box-label">CORTEX Intelligence</div><div class="cortex-box-text" id="cortexInsight">Generating fleet briefing...</div></div>
+    <div style="margin-top:0.5rem;display:flex;gap:0.3rem;">
+      <input id="hqCortexInput" placeholder="Ask CORTEX anything..." style="flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:5px;padding:0.35rem 0.5rem;color:#fff;font-size:0.55rem;font-family:Inter,sans-serif;outline:none;" onkeydown="if(event.key==='Enter')sendHqCortex()">
+      <button onclick="sendHqCortex()" style="padding:0.35rem 0.6rem;background:#34d399;color:#000;border:none;border-radius:5px;font-size:0.55rem;font-weight:700;cursor:pointer;">Ask</button>
+    </div>`;
   fetchFleetBriefing();
 }
 
@@ -674,7 +678,7 @@ async function fetchFleetBriefing() {
   const exceptions = allShipments.filter(s => s.status === 'failure').length;
   const exDetails = allShipments.filter(s => s.status === 'failure').map(s => `${s.carrier} ${s.tracking_code}: ${(s.checkpoints||[]).slice(-1)[0]?.message||s.status}`).join('; ');
   try {
-    const msg = `Full operations briefing. ${total} shipments: ${transit} transit, ${exceptions} exceptions. ${exDetails ? 'Exceptions: ' + exDetails : 'No exceptions.'} Give me 4 sentences. Infrastructure supply chain context. Be direct.`;
+    const msg = `Full operations briefing. Carrier shipments: ${total} total, ${transit} transit, ${exceptions} exceptions. ${exDetails ? 'Exceptions: ' + exDetails : 'No exceptions.'} Also include any live tracked flights from LAS in your briefing — check the flight data in your system prompt. Give me 4-5 sentences covering both carrier shipments and live flights. Be direct.`;
     const res = await fetch(SB_CORTEX, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg }) });
     const data = await res.json();
     const el = document.getElementById('cortexInsight');
@@ -682,6 +686,22 @@ async function fetchFleetBriefing() {
   } catch {
     const el = document.getElementById('cortexInsight');
     if (el) el.textContent = 'Briefing unavailable.';
+  }
+}
+
+async function sendHqCortex() {
+  const input = document.getElementById('hqCortexInput');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  const el = document.getElementById('cortexInsight');
+  if (el) el.textContent = 'Analyzing...';
+  try {
+    const res = await fetch(SB_CORTEX, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg }) });
+    const data = await res.json();
+    if (el) el.textContent = data.response || 'No response.';
+  } catch (e) {
+    if (el) el.textContent = 'Error: ' + e.message;
   }
 }
 
