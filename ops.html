@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CORTEX Operations Center — Logistix</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="./config.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', system-ui, sans-serif; background: #050510; color: #fff; height: 100vh; overflow: hidden; -webkit-font-smoothing: antialiased; }
+
+.shell { display: grid; grid-template-columns: 1fr; grid-template-rows: 44px 1fr 64px; height: 100vh; }
+
+/* ── HEADER ── */
+.ops-header { display: flex; align-items: center; justify-content: space-between; padding: 0 1.25rem; background: rgba(8,8,20,0.95); border-bottom: 1px solid rgba(255,255,255,0.04); z-index: 10; }
+.ops-brand { display: flex; align-items: center; gap: 0.5rem; }
+.ops-brand-icon { width: 1.4rem; height: 1.4rem; border-radius: 3px; }
+.ops-brand-text { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.05em; }
+.ops-brand-text em { font-style: normal; color: hsl(199,89%,60%); }
+.ops-badge { font-size: 0.45rem; color: #f59e0b; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2); padding: 0.15rem 0.4rem; border-radius: 9999px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; }
+
+.ops-stats { display: flex; gap: 1rem; align-items: center; }
+.ops-stat { display: flex; align-items: center; gap: 0.3rem; font-size: 0.6rem; }
+.ops-stat-val { font-weight: 700; font-size: 0.8rem; }
+.ops-stat-label { color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: 0.1em; }
+.ops-stat-val.amber { color: #f59e0b; } .ops-stat-val.blue { color: #60a5fa; } .ops-stat-val.cyan { color: #38bdf8; } .ops-stat-val.green { color: #34d399; }
+
+.ops-right { display: flex; align-items: center; gap: 0.8rem; }
+.ops-live { display: flex; align-items: center; gap: 0.3rem; font-size: 0.55rem; color: rgba(255,255,255,0.4); }
+.ops-live-dot { width: 5px; height: 5px; border-radius: 50%; background: #34d399; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.ops-link { font-size: 0.55rem; color: rgba(255,255,255,0.3); text-decoration: none; }
+.ops-link:hover { color: #fff; }
+
+/* ── MAP ── */
+.ops-map { position: relative; }
+#opsMap { width: 100%; height: 100%; background: #050510; }
+.leaflet-container { background: #050510; }
+
+/* ── SIDEBAR ── */
+.ops-sidebar { position: absolute; top: 44px; right: 0; width: 340px; height: calc(100vh - 44px - 64px); background: rgba(8,8,20,0.95); border-left: 1px solid rgba(255,255,255,0.04); z-index: 15; transform: translateX(100%); transition: transform 0.3s; overflow-y: auto; padding: 1rem; }
+.ops-sidebar.open { transform: translateX(0); }
+.ops-sidebar-close { position: absolute; top: 0.5rem; right: 0.5rem; background: none; border: none; color: rgba(255,255,255,0.4); font-size: 1rem; cursor: pointer; }
+.ops-sid-title { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; color: rgba(255,255,255,0.4); margin-bottom: 0.5rem; }
+.ops-sid-id { font-family: 'Courier New', monospace; font-size: 0.6rem; color: rgba(255,255,255,0.5); word-break: break-all; margin-bottom: 0.75rem; }
+.ops-sid-row { display: flex; justify-content: space-between; font-size: 0.65rem; margin-bottom: 0.3rem; }
+.ops-sid-key { color: rgba(255,255,255,0.3); }
+.ops-sid-val { color: rgba(255,255,255,0.7); }
+.ops-sid-divider { height: 1px; background: rgba(255,255,255,0.04); margin: 0.75rem 0; }
+.ops-sid-cp { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 4px; padding: 0.5rem; margin-bottom: 0.4rem; }
+.ops-sid-cp-type { font-size: 0.55rem; font-weight: 700; text-transform: uppercase; margin-bottom: 0.2rem; }
+.ops-sid-cp-type.amber { color: #f59e0b; } .ops-sid-cp-type.blue { color: #60a5fa; } .ops-sid-cp-type.green { color: #34d399; } .ops-sid-cp-type.purple { color: #8b5cf6; }
+.ops-sid-cp-detail { font-size: 0.5rem; color: rgba(255,255,255,0.4); }
+.ops-sid-cp-tx { font-family: 'Courier New', monospace; font-size: 0.5rem; }
+.ops-sid-cp-tx a { color: #60a5fa; text-decoration: none; }
+
+/* ── FEED ── */
+.ops-feed { display: flex; align-items: center; gap: 0.6rem; padding: 0 1rem; background: rgba(8,8,20,0.95); border-top: 1px solid rgba(255,255,255,0.04); overflow-x: auto; z-index: 10; }
+.ops-feed-label { font-family: 'Courier New', monospace; font-size: 0.45rem; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(255,255,255,0.15); white-space: nowrap; flex-shrink: 0; }
+.ops-feed-card { flex-shrink: 0; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 4px; padding: 0.35rem 0.6rem; min-width: 160px; }
+.ops-feed-card.new { border-color: rgba(245,158,11,0.4); animation: feedFlash 1s; }
+@keyframes feedFlash { 0%{background:rgba(245,158,11,0.15)} 100%{background:rgba(255,255,255,0.03)} }
+.ops-feed-type { font-family: 'Courier New', monospace; font-size: 0.45rem; letter-spacing: 0.15em; text-transform: uppercase; color: #f59e0b; }
+.ops-feed-route { font-size: 0.5rem; color: rgba(255,255,255,0.5); }
+.ops-feed-tx { font-family: 'Courier New', monospace; font-size: 0.45rem; }
+.ops-feed-tx a { color: rgba(255,255,255,0.35); text-decoration: none; }
+
+/* ── CONTROLS ── */
+.ops-controls { position: absolute; bottom: 80px; left: 1rem; z-index: 15; display: flex; flex-direction: column; gap: 0.4rem; }
+.ops-ctrl-btn { padding: 0.4rem 0.7rem; background: rgba(8,8,20,0.9); border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; color: rgba(255,255,255,0.5); font-size: 0.55rem; font-weight: 600; cursor: pointer; transition: all 0.3s; white-space: nowrap; }
+.ops-ctrl-btn:hover { border-color: rgba(255,255,255,0.2); color: #fff; }
+.ops-ctrl-btn.active { border-color: rgba(245,158,11,0.4); color: #f59e0b; background: rgba(245,158,11,0.08); }
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="ops-header">
+    <div class="ops-brand">
+      <img src="./assets/logos/ibs_mark_only.svg" alt="" class="ops-brand-icon">
+      <div class="ops-brand-text">CORTEX <em>Operations Center</em></div>
+      <div class="ops-badge">Live</div>
+    </div>
+    <div class="ops-stats">
+      <div class="ops-stat"><span class="ops-stat-val amber" id="osActive">0</span><span class="ops-stat-label">Active</span></div>
+      <div class="ops-stat"><span class="ops-stat-val blue" id="osAir">0</span><span class="ops-stat-label">Air</span></div>
+      <div class="ops-stat"><span class="ops-stat-val amber" id="osTruck">0</span><span class="ops-stat-label">Truck</span></div>
+      <div class="ops-stat"><span class="ops-stat-val cyan" id="osSea">0</span><span class="ops-stat-label">Sea</span></div>
+      <div class="ops-stat"><span class="ops-stat-val green" id="osDelivered">0</span><span class="ops-stat-label">Delivered</span></div>
+    </div>
+    <div class="ops-right">
+      <div class="ops-live"><div class="ops-live-dot"></div> Base Sepolia</div>
+      <a href="./dashboard.html" class="ops-link">Dashboard &rarr;</a>
+      <a href="./index.html" class="ops-link">Back</a>
+    </div>
+  </div>
+
+  <div class="ops-map">
+    <div id="opsMap"></div>
+    <div class="ops-sidebar" id="opsSidebar">
+      <button class="ops-sidebar-close" onclick="closeSidebar()">&times;</button>
+      <div id="opsSidebarContent"></div>
+    </div>
+    <div class="ops-controls">
+      <button class="ops-ctrl-btn active" id="ctrlWeather" onclick="toggleLayer('weather',this)">Weather Radar</button>
+      <button class="ops-ctrl-btn active" id="ctrlFlights" onclick="toggleLayer('flights',this)">Cargo Flights</button>
+      <button class="ops-ctrl-btn" id="ctrlSea" onclick="toggleLayer('sea',this)">Sea Lanes</button>
+      <button class="ops-ctrl-btn" id="ctrlRail" onclick="toggleLayer('rail',this)">Rail Network</button>
+    </div>
+  </div>
+
+  <div class="ops-feed" id="opsFeed">
+    <div class="ops-feed-label">Checkpoint Feed</div>
+  </div>
+</div>
+
+<script>
+const SB_SIM = 'https://jtifhcvbgxqwlywugvjv.supabase.co/functions/v1/logistix-simulate';
+const _cfg = window.LOGISTIX_CONFIG || {};
+const OWM_KEY = _cfg.openWeatherMap || '';
+const ORS_KEY = _cfg.openRouteService || '';
+const OPENSKY_ID = _cfg.openSkyClientId || '';
+const OPENSKY_SECRET = _cfg.openSkyClientSecret || '';
+const CARGO_PREFIXES = ['FDX','UPS','GTI','CLX','BOX','GEC','CAL','KAL','EVA','SIA','CKS','ABW','ATN','5Y'];
+const CONTRACT = '0x289ee93a1717fbef60add4f630ed8356b7a7e8d3';
+
+const map = L.map('opsMap', { zoomControl: false, minZoom: 2 }).setView([25, 0], 3);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+setTimeout(() => map.invalidateSize(), 200);
+
+// ── LAYERS ──
+let layers = {
+  weather: L.tileLayer(`https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${OWM_KEY}`, { maxZoom: 18, opacity: 0.4 }).addTo(map),
+  sea: null,
+  rail: null,
+  flights: true,
+};
+let flightMarkers = [];
+
+function toggleLayer(name, btn) {
+  btn.classList.toggle('active');
+  if (name === 'weather') {
+    if (layers.weather) { map.removeLayer(layers.weather); layers.weather = null; }
+    else { layers.weather = L.tileLayer(`https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${OWM_KEY}`, { maxZoom: 18, opacity: 0.4 }).addTo(map); }
+  }
+  if (name === 'sea') {
+    if (layers.sea) { map.removeLayer(layers.sea); layers.sea = null; }
+    else { layers.sea = L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', { maxZoom: 18, opacity: 0.5 }).addTo(map); }
+  }
+  if (name === 'rail') {
+    if (layers.rail) { map.removeLayer(layers.rail); layers.rail = null; }
+    else { layers.rail = L.tileLayer('https://{s}.tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png', { maxZoom: 18, opacity: 0.4, subdomains: 'abc' }).addTo(map); }
+  }
+  if (name === 'flights') { layers.flights = !layers.flights; if (!layers.flights) clearFlightMarkers(); }
+}
+
+function clearFlightMarkers() { flightMarkers.forEach(m => map.removeLayer(m)); flightMarkers = []; }
+
+// ── GREAT CIRCLE ──
+function gcArc(lat1, lon1, lat2, lon2, n) {
+  const toR = d => d * Math.PI / 180, toD = r => r * 180 / Math.PI;
+  const pts = [];
+  for (let i = 0; i <= n; i++) {
+    const f = i / n;
+    const dLat = toR(lat2 - lat1), dLon = toR(lon2 - lon1);
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(toR(lat1)) * Math.cos(toR(lat2)) * Math.sin(dLon / 2) ** 2;
+    const d = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    if (d === 0) { pts.push([lat1, lon1]); continue; }
+    const A = Math.sin((1 - f) * d) / Math.sin(d), B = Math.sin(f * d) / Math.sin(d);
+    const x = A * Math.cos(toR(lat1)) * Math.cos(toR(lon1)) + B * Math.cos(toR(lat2)) * Math.cos(toR(lon2));
+    const y = A * Math.cos(toR(lat1)) * Math.sin(toR(lon1)) + B * Math.cos(toR(lat2)) * Math.sin(toR(lon2));
+    const z = A * Math.sin(toR(lat1)) + B * Math.sin(toR(lat2));
+    pts.push([toD(Math.atan2(z, Math.sqrt(x * x + y * y))), toD(Math.atan2(y, x))]);
+  }
+  return pts;
+}
+
+// ── SHIPMENT DEFINITIONS ──
+const SHIPMENTS = [
+  { id: null, origin: { lat: 34.05, lon: -118.24, name: 'Los Angeles, CA' }, dest: { lat: 31.23, lon: 121.47, name: 'Shanghai, China' }, cargo: 'Electronics', mode: 'air', carrier: 'EVA 777F', progress: 0.15, speed: 0.002, checkpointAt: 0.5 },
+  { id: null, origin: { lat: 25.76, lon: -80.19, name: 'Miami, FL' }, dest: { lat: 50.11, lon: 8.68, name: 'Frankfurt, Germany' }, cargo: 'Pharmaceuticals', mode: 'air', carrier: 'CLX 747-8F', progress: 0.35, speed: 0.0018, checkpointAt: 0.6 },
+  { id: null, origin: { lat: 29.76, lon: -95.37, name: 'Houston, TX' }, dest: { lat: 25.20, lon: 55.27, name: 'Dubai, UAE' }, cargo: 'Auto Parts', mode: 'air', carrier: 'ATN 767F', progress: 0.6, speed: 0.0015, checkpointAt: 0.7 },
+  { id: null, origin: { lat: 33.74, lon: -118.26, name: 'Long Beach, CA' }, dest: { lat: -23.55, lon: -46.63, name: 'São Paulo, Brazil' }, cargo: 'General Freight', mode: 'sea', carrier: 'Container Ship', progress: 0.25, speed: 0.0008, checkpointAt: 0.5 },
+  { id: null, origin: { lat: 34.05, lon: -118.24, name: 'Los Angeles, CA' }, dest: { lat: 36.17, lon: -115.14, name: 'Las Vegas, NV' }, cargo: 'Perishables', mode: 'truck', carrier: 'Semi Truck', progress: 0.1, speed: 0.004, checkpointAt: 0.45 },
+];
+
+// Generate shipment IDs
+SHIPMENTS.forEach(s => {
+  const arr = new Uint8Array(32);
+  crypto.getRandomValues(arr);
+  s.id = '0x' + Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+  s.checkpoints = [];
+  s.checkpointFired = false;
+  s.delivered = false;
+  s.routePts = gcArc(s.origin.lat, s.origin.lon, s.dest.lat, s.dest.lon, 80);
+  s.marker = null;
+  s.routeLine = null;
+});
+
+// ── DRAW ROUTES ──
+const modeColors = { air: 'rgba(96,165,250,0.35)', sea: 'rgba(56,189,248,0.3)', truck: 'rgba(245,158,11,0.3)' };
+const modeDash = { air: '10 8', sea: '6 10', truck: '8 6' };
+const dotColors = { air: '#60a5fa', sea: '#38bdf8', truck: '#f59e0b' };
+
+SHIPMENTS.forEach(s => {
+  s.routeLine = L.polyline(s.routePts, { color: modeColors[s.mode], weight: 1.5, dashArray: modeDash[s.mode] }).addTo(map);
+  // Origin + dest markers
+  L.circleMarker([s.origin.lat, s.origin.lon], { radius: 3, color: '#f59e0b', fillColor: '#f59e0b', fillOpacity: 0.6, weight: 1 }).addTo(map).bindTooltip(s.origin.name, { direction: 'top' });
+  L.circleMarker([s.dest.lat, s.dest.lon], { radius: 3, color: '#34d399', fillColor: '#34d399', fillOpacity: 0.6, weight: 1 }).addTo(map).bindTooltip(s.dest.name, { direction: 'top' });
+  // Checkpoint marker
+  const cpIdx = Math.floor(s.checkpointAt * s.routePts.length);
+  const cpPt = s.routePts[cpIdx];
+  L.circleMarker(cpPt, { radius: 4, color: '#8b5cf6', fillColor: '#8b5cf6', fillOpacity: 0.5, weight: 1 }).addTo(map).bindTooltip('Checkpoint Geofence', { direction: 'top' });
+  // Moving dot
+  const startIdx = Math.floor(s.progress * s.routePts.length);
+  const startPt = s.routePts[Math.min(startIdx, s.routePts.length - 1)];
+  s.marker = L.circleMarker(startPt, { radius: 5, color: dotColors[s.mode], fillColor: dotColors[s.mode], fillOpacity: 1, weight: 2 }).addTo(map);
+  s.marker.on('click', () => openSidebar(s));
+  // Label
+  s.label = L.marker(startPt, { icon: L.divIcon({ className: '', html: `<div style="font-size:0.45rem;color:${dotColors[s.mode]};font-family:monospace;white-space:nowrap;text-shadow:0 0 4px rgba(0,0,0,0.9);">${s.carrier} · ${s.cargo}</div>`, iconSize: [120, 12], iconAnchor: [60, -8] }) }).addTo(map);
+});
+
+// ── UPDATE STATS ──
+function updateStats() {
+  const active = SHIPMENTS.filter(s => !s.delivered);
+  document.getElementById('osActive').textContent = active.length;
+  document.getElementById('osAir').textContent = active.filter(s => s.mode === 'air').length;
+  document.getElementById('osTruck').textContent = active.filter(s => s.mode === 'truck').length;
+  document.getElementById('osSea').textContent = active.filter(s => s.mode === 'sea').length;
+  document.getElementById('osDelivered').textContent = SHIPMENTS.filter(s => s.delivered).length;
+}
+updateStats();
+
+// ── SIDEBAR ──
+function openSidebar(s) {
+  const sb = document.getElementById('opsSidebar');
+  const shortId = s.id.slice(0, 10) + '...' + s.id.slice(-4);
+  let cpHtml = s.checkpoints.length === 0 ? '<div style="font-size:0.55rem;color:rgba(255,255,255,0.2);">No checkpoints recorded yet</div>' : s.checkpoints.map(cp => {
+    const cls = cp.type === 5 ? 'green' : cp.type >= 7 ? 'purple' : 'blue';
+    return `<div class="ops-sid-cp"><div class="ops-sid-cp-type ${cls}">${cp.label}</div><div class="ops-sid-cp-detail">${new Date(cp.timestamp * 1000).toLocaleString()}</div><div class="ops-sid-cp-tx"><a href="https://sepolia.basescan.org/tx/${cp.txHash}" target="_blank">${cp.txHash.slice(0, 14)}...${cp.txHash.slice(-6)}</a></div></div>`;
+  }).join('');
+
+  document.getElementById('opsSidebarContent').innerHTML = `
+    <div class="ops-sid-title">Shipment</div>
+    <div class="ops-sid-id">${s.id}</div>
+    <div class="ops-sid-row"><span class="ops-sid-key">Route</span><span class="ops-sid-val">${s.origin.name} → ${s.dest.name}</span></div>
+    <div class="ops-sid-row"><span class="ops-sid-key">Cargo</span><span class="ops-sid-val">${s.cargo}</span></div>
+    <div class="ops-sid-row"><span class="ops-sid-key">Mode</span><span class="ops-sid-val">${s.mode.toUpperCase()} — ${s.carrier}</span></div>
+    <div class="ops-sid-row"><span class="ops-sid-key">Progress</span><span class="ops-sid-val">${Math.round(s.progress * 100)}%</span></div>
+    <div class="ops-sid-row"><span class="ops-sid-key">Status</span><span class="ops-sid-val">${s.delivered ? 'DELIVERED' : s.checkpointFired ? 'PAST CHECKPOINT' : 'EN ROUTE'}</span></div>
+    <div class="ops-sid-divider"></div>
+    <div class="ops-sid-title">On-Chain Checkpoints (${s.checkpoints.length})</div>
+    ${cpHtml}
+    <div class="ops-sid-divider"></div>
+    <div style="text-align:center;"><a href="./track.html?id=${encodeURIComponent(s.id)}" target="_blank" style="font-size:0.55rem;color:#60a5fa;text-decoration:none;">View Full Audit Trail →</a></div>
+  `;
+  sb.classList.add('open');
+}
+
+function closeSidebar() { document.getElementById('opsSidebar').classList.remove('open'); }
+
+// ── CHECKPOINT RECORDING ──
+async function fireCheckpoint(s, eventType, label, lat, lon) {
+  try {
+    const res = await fetch(SB_SIM, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        shipmentId: s.id,
+        eventType,
+        location: { lat, lon, name: label },
+        bundle: { shipmentId: s.id, origin: s.origin.name, destination: s.dest.name, cargoType: s.cargo, carrier: s.carrier, event: label, mode: s.mode },
+      }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    s.checkpoints.push({ ...data, label, type: eventType, lat, lon });
+    addFeedCard(s, label, data);
+    return data;
+  } catch (e) { console.warn('Checkpoint failed:', e); return null; }
+}
+
+function addFeedCard(s, label, result) {
+  const feed = document.getElementById('opsFeed');
+  const card = document.createElement('div');
+  card.className = 'ops-feed-card new';
+  const shortRoute = s.origin.name.split(',')[0] + '→' + s.dest.name.split(',')[0];
+  card.innerHTML = `<div class="ops-feed-type">${label}</div><div class="ops-feed-route">${shortRoute} · ${s.cargo}</div><div class="ops-feed-tx"><a href="https://sepolia.basescan.org/tx/${result.txHash}" target="_blank">TX: ${result.txHash.slice(0, 10)}...${result.txHash.slice(-6)}</a></div>`;
+  card.onclick = () => openSidebar(s);
+  feed.appendChild(card);
+  feed.scrollLeft = feed.scrollWidth;
+}
+
+// ── OPENSKY LIVE FLIGHTS ──
+let osToken = null, osTokenExp = 0;
+async function getOSToken() {
+  if (osToken && Date.now() < osTokenExp) return osToken;
+  try {
+    const res = await fetch('https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token', {
+      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `grant_type=client_credentials&client_id=${OPENSKY_ID}&client_secret=${OPENSKY_SECRET}`,
+    });
+    if (!res.ok) return null;
+    const d = await res.json();
+    osToken = d.access_token; osTokenExp = Date.now() + (d.expires_in - 30) * 1000;
+    return osToken;
+  } catch { return null; }
+}
+
+async function loadCargoFlights() {
+  if (!layers.flights) return;
+  clearFlightMarkers();
+  const token = await getOSToken();
+  if (!token) return;
+  try {
+    const res = await fetch('https://opensky-network.org/api/states/all', { headers: { 'Authorization': `Bearer ${token}` } });
+    if (!res.ok) return;
+    const d = await res.json();
+    if (!d.states) return;
+    const cargo = d.states.filter(s => {
+      const cs = (s[1] || '').trim().toUpperCase();
+      return CARGO_PREFIXES.some(p => cs.startsWith(p)) && s[6] && s[5] && !s[8];
+    }).slice(0, 50);
+
+    cargo.forEach(f => {
+      const cs = (f[1] || '').trim();
+      const rot = f[10] ? `transform:rotate(${f[10]}deg)` : '';
+      const alt = f[7] ? Math.round(f[7] * 3.28084 / 1000) + 'kft' : '';
+      const m = L.marker([f[6], f[5]], { icon: L.divIcon({ className: '', html: `<div style="text-align:center;"><div style="font-size:10px;${rot};color:#60a5fa;">✈</div><div style="font-size:0.35rem;color:rgba(96,165,250,0.6);font-family:monospace;">${cs} ${alt}</div></div>`, iconSize: [60, 24], iconAnchor: [30, 12] }) }).addTo(map);
+      flightMarkers.push(m);
+    });
+  } catch (e) { console.warn('OpenSky:', e); }
+}
+
+// ── ANIMATION LOOP ──
+let lastTick = performance.now();
+
+function tick(now) {
+  const dt = (now - lastTick) / 1000;
+  lastTick = now;
+
+  SHIPMENTS.forEach(s => {
+    if (s.delivered) return;
+    s.progress += s.speed * dt;
+
+    if (s.progress >= 1) {
+      s.progress = 1;
+      s.delivered = true;
+      fireCheckpoint(s, 5, 'DELIVERED', s.dest.lat, s.dest.lon);
+      updateStats();
+    }
+
+    // Check geofence
+    if (!s.checkpointFired && s.progress >= s.checkpointAt) {
+      s.checkpointFired = true;
+      const cpIdx = Math.floor(s.checkpointAt * s.routePts.length);
+      const cpPt = s.routePts[cpIdx];
+      const eventType = s.mode === 'air' ? 13 : s.mode === 'sea' ? 17 : 7;
+      const label = s.mode === 'air' ? 'AIRPORT_ARRIVAL' : s.mode === 'sea' ? 'SEA_TRANSIT' : 'WEIGH_STATION';
+      fireCheckpoint(s, eventType, label, cpPt[0], cpPt[1]);
+    }
+
+    // Move dot
+    const idx = Math.min(Math.floor(s.progress * s.routePts.length), s.routePts.length - 1);
+    const pt = s.routePts[idx];
+    s.marker.setLatLng(pt);
+    s.label.setLatLng(pt);
+  });
+
+  requestAnimationFrame(tick);
+}
+
+// ── INIT ──
+// Fire CREATED for all shipments on load
+(async () => {
+  for (const s of SHIPMENTS) {
+    await fireCheckpoint(s, 0, 'CREATED', s.origin.lat, s.origin.lon);
+  }
+  updateStats();
+  requestAnimationFrame(tick);
+  loadCargoFlights();
+  setInterval(loadCargoFlights, 300000); // Refresh flights every 5 min
+})();
+</script>
+</body>
+</html>

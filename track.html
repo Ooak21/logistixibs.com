@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IBS Logistix — Track Shipment</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', system-ui, sans-serif; background: #080810; color: #fff; min-height: 100vh; -webkit-font-smoothing: antialiased; }
+
+.container { max-width: 640px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+.brand { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 2rem; }
+.brand-logo { width: 2rem; height: 2rem; border-radius: 6px; background: #2563eb; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; font-weight: 800; }
+.brand-text { font-size: 1rem; font-weight: 600; }
+.brand-text span { color: #f59e0b; }
+.brand-badge { font-size: 0.5rem; color: rgba(255,255,255,0.3); background: rgba(255,255,255,0.06); padding: 0.15rem 0.4rem; border-radius: 9999px; margin-left: 0.5rem; }
+
+.search-box { display: flex; gap: 0.5rem; margin-bottom: 2rem; }
+.search-input { flex: 1; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #fff; font-family: 'Courier New', monospace; font-size: 0.75rem; padding: 0.7rem 1rem; outline: none; }
+.search-input:focus { border-color: rgba(245,158,11,0.5); }
+.search-input::placeholder { color: rgba(255,255,255,0.2); }
+.search-btn { padding: 0.7rem 1.2rem; background: #f59e0b; color: #000; border: none; border-radius: 6px; font-size: 0.7rem; font-weight: 700; cursor: pointer; letter-spacing: 0.1em; }
+
+.shipment-id { font-family: 'Courier New', monospace; font-size: 0.65rem; color: rgba(255,255,255,0.4); word-break: break-all; background: rgba(255,255,255,0.03); padding: 0.6rem 0.8rem; border-radius: 4px; border: 1px solid rgba(255,255,255,0.06); margin-bottom: 1.5rem; }
+
+.loading { text-align: center; padding: 3rem 0; color: rgba(255,255,255,0.3); font-size: 0.8rem; }
+.error { text-align: center; padding: 2rem; color: #f87171; font-size: 0.8rem; }
+.empty { text-align: center; padding: 3rem 0; color: rgba(255,255,255,0.2); font-size: 0.8rem; }
+
+.timeline { display: flex; flex-direction: column; gap: 0; }
+
+.cp-item { display: flex; gap: 1rem; padding: 1rem 0; position: relative; }
+.cp-item:not(:last-child) { border-left: 2px solid rgba(255,255,255,0.06); margin-left: 7px; padding-left: calc(1rem + 7px); }
+.cp-item:last-child { margin-left: 7px; padding-left: calc(1rem + 7px); }
+
+.cp-dot { position: absolute; left: 0; top: 1.1rem; width: 16px; height: 16px; border-radius: 50%; border: 2px solid; }
+.cp-dot.blue { border-color: #60a5fa; background: rgba(96,165,250,0.2); }
+.cp-dot.purple { border-color: #8b5cf6; background: rgba(139,92,246,0.2); }
+.cp-dot.amber { border-color: #f59e0b; background: rgba(245,158,11,0.2); }
+.cp-dot.green { border-color: #34d399; background: rgba(52,211,153,0.2); }
+
+.cp-type { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.3rem; }
+.cp-type.blue { color: #60a5fa; } .cp-type.purple { color: #8b5cf6; } .cp-type.amber { color: #f59e0b; } .cp-type.green { color: #34d399; }
+
+.cp-time { font-size: 0.65rem; color: rgba(255,255,255,0.4); margin-bottom: 0.4rem; }
+.cp-detail { font-size: 0.6rem; color: rgba(255,255,255,0.3); margin-bottom: 0.15rem; }
+.cp-tx a { font-family: 'Courier New', monospace; font-size: 0.6rem; color: #60a5fa; text-decoration: none; }
+.cp-tx a:hover { color: #93bbfd; }
+
+.contract-info { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.06); text-align: center; }
+.contract-info a { font-family: 'Courier New', monospace; font-size: 0.6rem; color: #60a5fa; text-decoration: none; }
+.contract-info p { font-size: 0.5rem; color: rgba(255,255,255,0.2); margin-top: 0.3rem; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="brand">
+    <div class="brand-logo">IBS</div>
+    <div class="brand-text">Logisti<span>x</span></div>
+    <div class="brand-badge">Track</div>
+  </div>
+
+  <div class="search-box">
+    <input class="search-input" id="searchInput" placeholder="Enter shipment ID (0x...)" />
+    <button class="search-btn" onclick="loadShipment()">TRACK</button>
+  </div>
+
+  <div id="content">
+    <div class="empty">Enter a shipment ID or scan a QR code to view the on-chain audit trail.</div>
+  </div>
+
+  <div class="contract-info">
+    <a href="https://sepolia.basescan.org/address/0x289ee93a1717fbef60add4f630ed8356b7a7e8d3" target="_blank">ShipmentRegistry: 0x289ee9...e8d3</a>
+    <p>Base Sepolia · Verified on Sourcify · Powered by CORTEX</p>
+  </div>
+</div>
+
+<script>
+const RPC = 'https://sepolia.base.org';
+const REGISTRY = '0x289ee93a1717fbef60add4f630ed8356b7a7e8d3';
+const DEPLOY_BLOCK = 40353200;
+const EVENT_LABELS = { 0:'CREATED', 1:'LOADED', 2:'SHIPPED', 3:'CUSTOMS_CLEARED', 4:'EXCEPTION', 5:'DELIVERED', 6:'SIGNED_OFF', 7:'WEIGH_STATION', 8:'DELAYED', 9:'MISSED_CHECKPOINT', 10:'GEOFENCE_VIOLATION', 11:'PORT_DEPARTURE', 12:'PORT_ARRIVAL', 13:'AIRPORT_DEPARTURE', 14:'AIRPORT_ARRIVAL', 15:'RAIL_TRANSFER', 16:'WAREHOUSE_RECEIVED', 17:'SEA_TRANSIT', 18:'TEMPERATURE_BREACH' };
+const CHECKPOINT_TOPIC = '0x' + 'a8e28de8bfb5693e40ea52483aa07e11891133ae13e7e4b887063e89dc00e20a';
+
+// On load, check URL param
+const params = new URLSearchParams(window.location.search);
+const idParam = params.get('id');
+if (idParam) {
+  document.getElementById('searchInput').value = idParam;
+  setTimeout(loadShipment, 100);
+}
+
+async function rpcCall(method, params) {
+  const res = await fetch(RPC, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
+  });
+  const data = await res.json();
+  return data.result;
+}
+
+async function loadShipment() {
+  const id = document.getElementById('searchInput').value.trim();
+  if (!id || !id.startsWith('0x')) {
+    document.getElementById('content').innerHTML = '<div class="error">Please enter a valid shipment ID (0x...)</div>';
+    return;
+  }
+
+  const content = document.getElementById('content');
+  content.innerHTML = '<div class="loading">Querying Base Sepolia blockchain...</div>';
+
+  try {
+    const currentBlockHex = await rpcCall('eth_blockNumber', []);
+    const currentBlock = parseInt(currentBlockHex, 16);
+    const fromBlock = Math.max(DEPLOY_BLOCK, currentBlock - 9999);
+
+    const paddedId = id.length === 66 ? id : id.padEnd(66, '0');
+
+    const logs = await rpcCall('eth_getLogs', [{
+      address: REGISTRY,
+      fromBlock: '0x' + fromBlock.toString(16),
+      toBlock: 'latest',
+      topics: [null, paddedId],
+    }]);
+
+    if (!logs || logs.length === 0) {
+      content.innerHTML = '<div class="shipment-id">' + id + '</div><div class="empty">No checkpoints found for this shipment on-chain.</div>';
+      return;
+    }
+
+    const checkpoints = logs.map(log => {
+      const eventType = parseInt(log.topics[2], 16);
+      const data = log.data.slice(2);
+      const timestamp = parseInt(data.slice(0, 64), 16);
+
+      return {
+        eventType,
+        label: EVENT_LABELS[eventType] || 'EVENT_' + eventType,
+        timestamp,
+        timeStr: new Date(timestamp * 1000).toLocaleString(),
+        txHash: log.transactionHash,
+        blockNumber: parseInt(log.blockNumber, 16),
+      };
+    }).sort((a, b) => a.timestamp - b.timestamp);
+
+    let html = '<div class="shipment-id">Shipment: ' + id + '</div>';
+    html += '<div class="timeline">';
+
+    checkpoints.forEach(cp => {
+      const cls = cp.eventType === 5 || cp.eventType === 6 ? 'green' : cp.eventType === 3 ? 'amber' : cp.eventType === 2 ? 'purple' : 'blue';
+      const shortTx = cp.txHash.slice(0, 14) + '...' + cp.txHash.slice(-6);
+      html += `
+        <div class="cp-item">
+          <div class="cp-dot ${cls}"></div>
+          <div>
+            <div class="cp-type ${cls}">${cp.label}</div>
+            <div class="cp-time">${cp.timeStr}</div>
+            <div class="cp-detail">Block #${cp.blockNumber}</div>
+            <div class="cp-tx"><a href="https://sepolia.basescan.org/tx/${cp.txHash}" target="_blank">${shortTx}</a></div>
+          </div>
+        </div>`;
+    });
+
+    html += '</div>';
+    content.innerHTML = html;
+
+    // Update URL without reload
+    window.history.replaceState(null, '', '?id=' + encodeURIComponent(id));
+
+  } catch (err) {
+    content.innerHTML = '<div class="error">Error querying blockchain: ' + err.message + '</div>';
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IBS Logistix — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<script src="./config.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: #080810;
+  color: #fff;
+  height: 100vh;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+.shell {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  grid-template-rows: 48px 42px 1fr 70px;
+  height: 100vh;
+}
+
+@media (max-width: 960px) {
+  .shell { grid-template-columns: 1fr; }
+  .right-panel { display: none; }
+}
+
+/* ── HEADER ── */
+.header {
+  grid-column: 1 / -1; grid-row: 1;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 1.25rem;
+  background: rgba(12,12,24,0.95);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.header-left { display: flex; align-items: center; gap: 0.6rem; }
+.header-logo { width: 1.4rem; height: 1.4rem; color: #f59e0b; }
+.header-title { font-size: 0.95rem; font-weight: 600; letter-spacing: -0.02em; }
+.header-badge { font-size: 0.5rem; color: rgba(255,255,255,0.4); border: 1px solid rgba(255,255,255,0.15); padding: 0.15rem 0.4rem; border-radius: 4px; font-family: monospace; letter-spacing: 0.1em; text-transform: uppercase; }
+.header-right { display: flex; align-items: center; gap: 0.8rem; }
+.header-live { display: flex; align-items: center; gap: 0.3rem; font-size: 0.6rem; color: rgba(255,255,255,0.45); }
+.live-dot { width: 5px; height: 5px; border-radius: 50%; background: #34d399; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.header-back { font-size: 0.6rem; color: rgba(255,255,255,0.35); text-decoration: none; }
+.header-back:hover { color: #fff; }
+
+/* ── COMPACT STATS ── */
+.stats-row {
+  grid-column: 1; grid-row: 2;
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0 1.25rem;
+  background: rgba(12,12,24,0.5);
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.stat-pill {
+  display: flex; align-items: center; gap: 0.4rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.02);
+}
+.stat-pill .sv { font-size: 0.9rem; font-weight: 700; }
+.stat-pill .sl { font-size: 0.5rem; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.1em; }
+.sv.blue { color: #60a5fa; } .sv.red { color: #f87171; } .sv.green { color: #34d399; } .sv.white { color: #e4e4e7; }
+
+/* ── MAP ── */
+.map-area { grid-column: 1; grid-row: 3; position: relative; overflow: hidden; }
+#map { width: 100%; height: 100%; background: #080810; }
+.leaflet-container { background: #080810; }
+
+/* ── RIGHT PANEL ── */
+.right-panel { grid-column: 2; grid-row: 2 / 5; display: flex; flex-direction: column; border-left: 1px solid rgba(255,255,255,0.06); background: rgba(12,12,24,0.95); overflow: hidden; }
+
+.panel-tabs { display: flex; border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
+.ptab { flex: 1; padding: 0.6rem 0; font-size: 0.55rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; text-align: center; color: rgba(255,255,255,0.3); background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.3s; }
+.ptab:hover { color: rgba(255,255,255,0.55); }
+.ptab.active { color: #f59e0b; border-bottom-color: #f59e0b; }
+
+.tab-content { flex: 1; overflow-y: auto; display: none; flex-direction: column; }
+.tab-content.active { display: flex; }
+
+/* ── FORM ── */
+.sim-form { padding: 0.75rem; display: flex; flex-direction: column; gap: 0.6rem; }
+.form-label { font-family: 'Courier New', monospace; font-size: 0.45rem; letter-spacing: 0.3em; text-transform: uppercase; color: rgba(255,255,255,0.35); margin-bottom: 0.15rem; display: block; }
+.form-input, .form-select { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; color: #fff; font-family: 'Inter', sans-serif; font-size: 0.72rem; padding: 0.45rem 0.6rem; outline: none; }
+.form-input:focus, .form-select:focus { border-color: rgba(245,158,11,0.5); }
+.form-select option { background: #0c0c18; }
+.form-input::placeholder { color: rgba(255,255,255,0.2); }
+
+.sim-btn { width: 100%; padding: 0.65rem; background: #f59e0b; color: #000; border: none; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; cursor: pointer; }
+.sim-btn:hover { background: #fbbf24; }
+.sim-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.sim-status { font-family: 'Courier New', monospace; font-size: 0.5rem; letter-spacing: 0.1em; text-align: center; color: #f59e0b; min-height: 1em; }
+
+.pipeline { display: flex; flex-wrap: wrap; gap: 1px; }
+.pip-step { flex: 1; min-width: 0; font-family: 'Courier New', monospace; font-size: 0.4rem; letter-spacing: 0.05em; text-transform: uppercase; text-align: center; padding: 0.25rem 0.1rem; border: 1px solid rgba(255,255,255,0.06); color: rgba(255,255,255,0.2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pip-step.active { background: rgba(245,158,11,0.15); border-color: rgba(245,158,11,0.4); color: #f59e0b; }
+.pip-step.done { background: rgba(52,211,153,0.1); border-color: rgba(52,211,153,0.3); color: #34d399; }
+
+/* ── SHIPMENTS TAB ── */
+.ship-item { padding: 0.6rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.04); cursor: pointer; transition: background 0.2s; }
+.ship-item:hover { background: rgba(255,255,255,0.03); }
+.ship-item.selected { background: rgba(255,255,255,0.06); }
+.ship-id { font-size: 0.7rem; font-weight: 600; }
+.ship-route { font-size: 0.6rem; color: rgba(255,255,255,0.4); margin-top: 0.1rem; }
+.ship-meta { font-size: 0.55rem; color: rgba(255,255,255,0.25); margin-top: 0.2rem; display: flex; justify-content: space-between; }
+.ship-badge { font-size: 0.45rem; font-weight: 700; text-transform: uppercase; padding: 0.1rem 0.35rem; border-radius: 9999px; }
+.ship-badge.in_transit { background: rgba(96,165,250,0.2); color: #60a5fa; }
+.ship-badge.delivered { background: rgba(52,211,153,0.2); color: #34d399; }
+.ship-badge.created { background: rgba(161,161,170,0.2); color: #a1a1aa; }
+
+/* ── CORTEX TAB ── */
+.cortex-header { padding: 0.6rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; }
+.cortex-dot { width: 5px; height: 5px; border-radius: 50%; background: #34d399; animation: pulse 2s infinite; }
+.cortex-label { font-size: 0.75rem; font-weight: 600; }
+.cortex-sub { font-size: 0.55rem; color: rgba(255,255,255,0.3); }
+.cortex-messages { flex: 1; overflow-y: auto; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.cmsg { max-width: 88%; padding: 0.45rem 0.65rem; border-radius: 8px; font-size: 0.72rem; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+.cmsg.user { background: #2563eb; align-self: flex-end; }
+.cmsg.assistant { background: rgba(255,255,255,0.06); align-self: flex-start; color: rgba(255,255,255,0.85); }
+.cortex-input-row { padding: 0.5rem; border-top: 1px solid rgba(255,255,255,0.06); display: flex; gap: 0.4rem; flex-shrink: 0; }
+.cortex-input { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 0.45rem 0.6rem; color: #fff; font-size: 0.72rem; outline: none; font-family: 'Inter', sans-serif; }
+.cortex-input::placeholder { color: rgba(255,255,255,0.2); }
+.cortex-send { padding: 0.45rem 0.8rem; background: #f59e0b; color: #000; border: none; border-radius: 6px; font-size: 0.65rem; font-weight: 600; cursor: pointer; }
+.cortex-send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── CHAIN OPS TAB ── */
+.chain-section { padding: 0.75rem; }
+.chain-label { font-size: 0.55rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: rgba(255,255,255,0.35); margin-bottom: 0.4rem; }
+.chain-mono { font-family: 'Courier New', monospace; font-size: 0.6rem; color: rgba(255,255,255,0.55); word-break: break-all; background: rgba(255,255,255,0.04); padding: 0.4rem; border-radius: 3px; }
+.chain-link { color: #60a5fa; text-decoration: none; font-family: 'Courier New', monospace; font-size: 0.55rem; }
+.chain-link:hover { color: #93bbfd; }
+.chain-cp { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; padding: 0.6rem; margin-bottom: 0.5rem; }
+.chain-cp-type { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; margin-bottom: 0.3rem; }
+.chain-cp-type.green { color: #34d399; } .chain-cp-type.blue { color: #60a5fa; } .chain-cp-type.purple { color: #8b5cf6; } .chain-cp-type.gray { color: #a1a1aa; } .chain-cp-type.amber { color: #f59e0b; }
+.chain-cp-row { display: flex; justify-content: space-between; font-size: 0.55rem; margin-bottom: 0.1rem; }
+.chain-cp-key { color: rgba(255,255,255,0.3); }
+.chain-cp-val { color: rgba(255,255,255,0.6); }
+.verify-btn { width: 100%; margin-top: 0.3rem; padding: 0.35rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 3px; color: rgba(255,255,255,0.45); font-size: 0.5rem; font-weight: 600; cursor: pointer; }
+.verify-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.verify-btn.verified { background: rgba(52,211,153,0.1); border-color: rgba(52,211,153,0.3); color: #34d399; }
+
+/* ── BOTTOM FEED ── */
+.feed { grid-column: 1; grid-row: 4; background: rgba(12,12,24,0.95); border-top: 1px solid rgba(255,255,255,0.06); padding: 0.4rem 1rem; display: flex; gap: 0.6rem; align-items: center; overflow-x: auto; }
+.feed-empty { font-family: 'Courier New', monospace; font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; opacity: 0.2; white-space: nowrap; }
+.cp-card { flex-shrink: 0; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; padding: 0.4rem 0.6rem; min-width: 180px; }
+.cp-card.active { border-color: rgba(245,158,11,0.5); }
+.cp-card.done { border-color: rgba(52,211,153,0.3); }
+.cp-label { font-family: 'Courier New', monospace; font-size: 0.45rem; letter-spacing: 0.15em; text-transform: uppercase; color: #f59e0b; margin-bottom: 0.15rem; }
+.cp-card.done .cp-label { color: #34d399; }
+.cp-hash { font-family: 'Courier New', monospace; font-size: 0.5rem; }
+.cp-hash a { color: rgba(255,255,255,0.45); text-decoration: none; }
+.cp-hash a:hover { color: #f59e0b; }
+.cp-block { font-family: 'Courier New', monospace; font-size: 0.4rem; color: rgba(255,255,255,0.2); }
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="header">
+    <div class="header-left">
+      <svg class="header-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+      <div class="header-title">LOGISTIX</div>
+      <div class="header-badge">by CORTEX</div>
+    </div>
+    <div class="header-right">
+      <div class="header-live"><div class="live-dot"></div> Contract Live</div>
+      <a href="./index.html" class="header-back">&larr; Back</a>
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-pill"><span class="sv white" id="statTotal">0</span><span class="sl">Shipments</span></div>
+    <div class="stat-pill"><span class="sv blue" id="statTransit">0</span><span class="sl">In Transit</span></div>
+    <div class="stat-pill"><span class="sv red" id="statExceptions">0</span><span class="sl">Exceptions</span></div>
+    <div class="stat-pill"><span class="sv green" id="statDelivered">0</span><span class="sl">Delivered</span></div>
+  </div>
+
+  <div class="map-area"><div id="map"></div></div>
+
+  <div class="feed" id="feed">
+    <div class="feed-empty">Checkpoints appear here as they anchor on-chain</div>
+  </div>
+
+  <div class="right-panel">
+    <div class="panel-tabs">
+      <button class="ptab active" onclick="switchTab('sim',this)">Simulator</button>
+      <button class="ptab" onclick="switchTab('shipments',this)">Shipments</button>
+      <button class="ptab" onclick="switchTab('cortex',this)">CORTEX</button>
+      <button class="ptab" onclick="switchTab('chain',this)">Chain Ops</button>
+    </div>
+
+    <div class="tab-content active" id="tab-sim">
+      <div class="sim-form">
+        <div><label class="form-label">Origin (fixed)</label><input class="form-input" value="Los Angeles, CA" disabled></div>
+        <div><label class="form-label">Destination</label><select class="form-select" id="destSelect"></select></div>
+        <div><label class="form-label">Cargo Type</label>
+          <select class="form-select" id="cargoSelect">
+            <option value="electronics">Electronics</option>
+            <option value="pharmaceuticals">Pharmaceuticals</option>
+            <option value="auto_parts">Auto Parts</option>
+            <option value="perishables">Perishables</option>
+            <option value="hazmat">Hazardous Materials</option>
+            <option value="general">General Freight</option>
+          </select>
+        </div>
+        <div><label class="form-label">Pickup Date</label><input class="form-input" type="date" id="pickupDate"></div>
+        <div><label class="form-label">Notify (email)</label><input class="form-input" type="email" id="notifyEmail" value="luis@innovativeblockchainsolutions.live" placeholder="recipient@email.com"></div>
+        <div class="pipeline" id="pipeline"></div>
+        <button class="sim-btn" id="simBtn" onclick="startSimulation()">▸ Launch Simulation</button>
+        <div class="sim-status" id="simStatus"></div>
+        <div id="qrArea" style="text-align:center;display:none;">
+          <div style="font-size:0.45rem;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:0.2em;margin-bottom:0.4rem;">Scan to Track</div>
+          <div id="qrCode"></div>
+          <button id="copyIdBtn" style="margin-top:0.5rem;padding:0.3rem 0.8rem;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:3px;color:rgba(255,255,255,0.5);font-size:0.5rem;cursor:pointer;" onclick="copyShipmentId()">Copy Shipment ID</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-shipments">
+      <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
+        <input class="form-input" type="text" id="shipSearch" placeholder="Search shipments..." oninput="renderShipments()">
+      </div>
+      <div id="shipList" style="flex:1; overflow-y:auto;"></div>
+    </div>
+
+    <div class="tab-content" id="tab-cortex">
+      <div class="cortex-header">
+        <div class="cortex-dot"></div>
+        <div class="cortex-label">CORTEX</div>
+        <div class="cortex-sub">Logistics Intelligence</div>
+      </div>
+      <div class="cortex-messages" id="cortexMessages">
+        <div class="cmsg assistant">CORTEX Logistics online. Ask me about shipment status, audit trails, or on-chain verification.</div>
+      </div>
+      <div class="cortex-input-row">
+        <input class="cortex-input" id="cortexInput" placeholder="Ask CORTEX..." onkeydown="if(event.key==='Enter')sendCortex()">
+        <button class="cortex-send" id="cortexSendBtn" onclick="sendCortex()">Send</button>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-chain"><div id="chainContent">
+      <div class="chain-section">
+        <div class="chain-label">Contract</div>
+        <a class="chain-link" href="https://sepolia.basescan.org/address/0x289ee93a1717fbef60add4f630ed8356b7a7e8d3" target="_blank">0x289ee9...e8d3</a>
+        <div style="font-size:0.45rem; color:rgba(255,255,255,0.2); margin-top:0.2rem;">Base Sepolia · Verified</div>
+      </div>
+      <div class="chain-section" style="color:rgba(255,255,255,0.25); font-size:0.65rem; text-align:center; padding-top:2rem;">Select a shipment to view on-chain data</div>
+    </div></div>
+  </div>
+</div>
+
+<script>
+const SB_BASE = 'https://jtifhcvbgxqwlywugvjv.supabase.co/functions/v1';
+const SB_SIM = SB_BASE + '/logistix-simulate';
+const SB_CORTEX = SB_BASE + '/logistix-cortex';
+const SB_NOTIFY = SB_BASE + '/logistix-notify';
+const TRACK_BASE = 'https://innovativeblockchainsolutions.live/logistix/track.html';
+const DRIVER_BASE = 'https://innovativeblockchainsolutions.live/logistix/driver.html';
+
+// ── LAYER 2 KEYS — loaded from config.js ──
+const LAYER2_KEYS = window.LOGISTIX_CONFIG || {};
+
+// ── FREE DATA SOURCES ──
+async function fetchNOAAAlerts(lat, lon) {
+  try {
+    const res = await fetch(`https://api.weather.gov/alerts/active?point=${lat.toFixed(4)},${lon.toFixed(4)}&limit=5`, { headers: { 'User-Agent': 'IBSLogistix/1.0' } });
+    const data = await res.json();
+    return (data.features || []).map(f => ({ event: f.properties.event, severity: f.properties.severity, headline: f.properties.headline, area: f.properties.areaDesc }));
+  } catch (e) { return []; }
+}
+
+async function fetchUSGSQuakes(lat, lon) {
+  try {
+    const res = await fetch(`https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&latitude=${lat}&longitude=${lon}&maxradiuskm=200&minmagnitude=3&limit=5&orderby=time`);
+    const data = await res.json();
+    return (data.features || []).map(f => ({ mag: f.properties.mag, place: f.properties.place, time: new Date(f.properties.time).toLocaleString() }));
+  } catch (e) { return []; }
+}
+
+async function fetchORSRoute(fromLon, fromLat, toLon, toLat) {
+  if (!LAYER2_KEYS.openRouteService) return null;
+  try {
+    const res = await fetch(`https://api.openrouteservice.org/v2/directions/driving-hgv?api_key=${LAYER2_KEYS.openRouteService}&start=${fromLon},${fromLat}&end=${toLon},${toLat}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const coords = data.features?.[0]?.geometry?.coordinates;
+    const props = data.features?.[0]?.properties?.summary;
+    if (!coords) return null;
+    return {
+      polyline: coords.map(c => [c[1], c[0]]),
+      distance_km: props?.distance ? (props.distance / 1000).toFixed(1) : null,
+      duration_min: props?.duration ? Math.round(props.duration / 60) : null,
+    };
+  } catch (e) { console.warn('ORS route failed:', e); return null; }
+}
+
+async function fetchOWMWeather(lat, lon) {
+  if (!LAYER2_KEYS.openWeatherMap) return null;
+  try {
+    const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${LAYER2_KEYS.openWeatherMap}&units=imperial`);
+    if (!res.ok) return null;
+    const d = await res.json();
+    return {
+      temp_f: Math.round(d.main?.temp),
+      feels_like_f: Math.round(d.main?.feels_like),
+      humidity: d.main?.humidity,
+      wind_mph: Math.round((d.wind?.speed || 0) * 1),
+      wind_gust_mph: d.wind?.gust ? Math.round(d.wind.gust) : null,
+      visibility_mi: d.visibility ? (d.visibility / 1609).toFixed(1) : null,
+      condition: d.weather?.[0]?.main,
+      description: d.weather?.[0]?.description,
+      icon: d.weather?.[0]?.icon,
+      clouds_pct: d.clouds?.all,
+      rain_1h: d.rain?.['1h'] || 0,
+      snow_1h: d.snow?.['1h'] || 0,
+      city: d.name,
+    };
+  } catch (e) { return null; }
+}
+
+let weatherRadarLayer = null;
+let precipLayer = null;
+
+function showWeatherRadar() {
+  if (!LAYER2_KEYS.openWeatherMap || weatherRadarLayer) return;
+  precipLayer = L.tileLayer(`https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${LAYER2_KEYS.openWeatherMap}`, { maxZoom: 18, opacity: 0.5 }).addTo(map);
+  weatherRadarLayer = L.tileLayer(`https://tile.openweathermap.org/map/clouds_new/{z}/{x}/{y}.png?appid=${LAYER2_KEYS.openWeatherMap}`, { maxZoom: 18, opacity: 0.3 }).addTo(map);
+}
+
+function hideWeatherRadar() {
+  if (precipLayer) { map.removeLayer(precipLayer); precipLayer = null; }
+  if (weatherRadarLayer) { map.removeLayer(weatherRadarLayer); weatherRadarLayer = null; }
+}
+
+// ── OPENSKY CARGO FLIGHT TRACKING ──
+const CARGO_CALLSIGN_PREFIXES = ['FDX','UPS','GTI','CLX','BOX','GEC','CAL','KAL','EVA','SIA','CKS','ABW','MPH','ATN','5Y','QY'];
+
+let openSkyToken = null;
+let openSkyTokenExpiry = 0;
+
+async function getOpenSkyToken() {
+  if (openSkyToken && Date.now() < openSkyTokenExpiry) return openSkyToken;
+  if (!LAYER2_KEYS.openSkyClientId) return null;
+  try {
+    const res = await fetch('https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `grant_type=client_credentials&client_id=${LAYER2_KEYS.openSkyClientId}&client_secret=${LAYER2_KEYS.openSkyClientSecret}`,
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    openSkyToken = data.access_token;
+    openSkyTokenExpiry = Date.now() + (data.expires_in - 30) * 1000;
+    return openSkyToken;
+  } catch (e) { console.warn('OpenSky auth failed:', e); return null; }
+}
+
+async function fetchCargoFlights(minLat, minLon, maxLat, maxLon) {
+  const token = await getOpenSkyToken();
+  if (!token) return [];
+  try {
+    const headers = { 'Authorization': `Bearer ${token}` };
+    const res = await fetch(`https://opensky-network.org/api/states/all?lamin=${minLat}&lomin=${minLon}&lamax=${maxLat}&lomax=${maxLon}`, { headers });
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!data.states) return [];
+    return data.states
+      .filter(s => {
+        const callsign = (s[1] || '').trim().toUpperCase();
+        return CARGO_CALLSIGN_PREFIXES.some(p => callsign.startsWith(p));
+      })
+      .map(s => ({
+        callsign: (s[1] || '').trim(),
+        country: s[2],
+        lat: s[6],
+        lon: s[5],
+        altitude_m: s[7],
+        velocity_ms: s[9],
+        heading: s[10],
+        on_ground: s[8],
+      }))
+      .filter(f => f.lat && f.lon && !f.on_ground)
+      .slice(0, 20);
+  } catch (e) { console.warn('OpenSky fetch failed:', e); return []; }
+}
+
+async function fetchMapboxTrafficETA(fromLon, fromLat, toLon, toLat) {
+  if (!LAYER2_KEYS.mapbox) return null;
+  try {
+    const res = await fetch(`https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${fromLon},${fromLat};${toLon},${toLat}?access_token=${LAYER2_KEYS.mapbox}&overview=false&annotations=congestion,duration`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const route = data.routes?.[0];
+    if (!route) return null;
+    const congestionLevels = route.legs?.[0]?.annotation?.congestion || [];
+    const heavyTraffic = congestionLevels.filter(c => c === 'heavy' || c === 'severe').length;
+    const trafficPct = congestionLevels.length > 0 ? Math.round((heavyTraffic / congestionLevels.length) * 100) : 0;
+    return {
+      duration_min: Math.round(route.duration / 60),
+      duration_traffic_min: Math.round(route.duration / 60),
+      distance_km: (route.distance / 1000).toFixed(1),
+      congestion_pct: trafficPct,
+      congestion_label: trafficPct > 30 ? 'HEAVY' : trafficPct > 10 ? 'MODERATE' : 'CLEAR',
+    };
+  } catch (e) { console.warn('Mapbox traffic failed:', e); return null; }
+}
+
+async function fetchOverpassStops(lat, lon) {
+  try {
+    const query = `[out:json][timeout:10];(node["amenity"="fuel"]["hgv"="yes"](around:80000,${lat},${lon});node["amenity"="truck_stop"](around:80000,${lat},${lon});node["amenity"="weighbridge"](around:80000,${lat},${lon}););out body 15;`;
+    const res = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(query) });
+    const data = await res.json();
+    return (data.elements || []).map(el => ({ lat: el.lat, lon: el.lon, name: el.tags?.name || el.tags?.amenity || 'Stop', type: el.tags?.amenity }));
+  } catch (e) { return []; }
+}
+
+async function fetchWeighStationsAlongRoute(originLat, originLon, destLat, destLon) {
+  try {
+    const midLat = (originLat + destLat) / 2;
+    const midLon = (originLon + destLon) / 2;
+    const q1Lat = (originLat + midLat) / 2;
+    const q1Lon = (originLon + midLon) / 2;
+    const q3Lat = (midLat + destLat) / 2;
+    const q3Lon = (midLon + destLon) / 2;
+    const query = `[out:json][timeout:12];(node["amenity"="weighbridge"](around:60000,${q1Lat},${q1Lon});node["amenity"="weighbridge"](around:60000,${q3Lat},${q3Lon});node["highway"="rest_area"]["hgv"](around:60000,${midLat},${midLon}););out body 5;`;
+    const res = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(query) });
+    const data = await res.json();
+    const stations = (data.elements || []).map(el => ({ lat: el.lat, lon: el.lon, name: el.tags?.name || 'Weigh Station', type: el.tags?.amenity }));
+    return stations.slice(0, 2);
+  } catch (e) { return []; }
+}
+
+async function fetchOverpassPorts(lat, lon) {
+  try {
+    const query = `[out:json][timeout:10];(node["landuse"="port"](around:30000,${lat},${lon});node["industrial"="port"](around:30000,${lat},${lon});node["harbour"="yes"](around:30000,${lat},${lon});way["landuse"="port"](around:30000,${lat},${lon}););out center 3;`;
+    const res = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(query) });
+    const data = await res.json();
+    return (data.elements || []).map(el => ({ lat: el.lat || el.center?.lat, lon: el.lon || el.center?.lon, name: el.tags?.name || 'Port Terminal' })).filter(p => p.lat);
+  } catch (e) { return []; }
+}
+
+async function fetchOverpassRailTerminals(lat, lon) {
+  try {
+    const query = `[out:json][timeout:10];(node["railway"="station"]["usage"~"freight|industrial"](around:40000,${lat},${lon});node["landuse"="railway"](around:40000,${lat},${lon}););out body 3;`;
+    const res = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(query) });
+    const data = await res.json();
+    return (data.elements || []).map(el => ({ lat: el.lat, lon: el.lon, name: el.tags?.name || 'Rail Terminal' }));
+  } catch (e) { return []; }
+}
+
+// ── CARGO CARRIERS ──
+const CARGO_CARRIERS = [
+  { callsign: 'FDX', name: 'FedEx Express', aircraft: '777F' },
+  { callsign: 'UPS', name: 'UPS Airlines', aircraft: '747-8F' },
+  { callsign: 'GTI', name: 'Atlas Air', aircraft: '747-400F' },
+  { callsign: 'CLX', name: 'Cargolux', aircraft: '747-8F' },
+  { callsign: 'BOX', name: 'AeroLogic', aircraft: '777F' },
+  { callsign: 'GEC', name: 'Lufthansa Cargo', aircraft: '777F' },
+  { callsign: 'CAL', name: 'China Airlines Cargo', aircraft: '747-400F' },
+  { callsign: 'KAL', name: 'Korean Air Cargo', aircraft: '747-8F' },
+  { callsign: 'EVA', name: 'EVA Air Cargo', aircraft: '777F' },
+  { callsign: 'SIA', name: 'Singapore Airlines Cargo', aircraft: '747-400F' },
+];
+
+function pickCargoCarrier(region) {
+  const pool = region === 'asia' ? CARGO_CARRIERS.filter(c => ['CAL','KAL','EVA','SIA','GTI'].includes(c.callsign))
+    : region === 'europe' ? CARGO_CARRIERS.filter(c => ['CLX','GEC','BOX','GTI','FDX'].includes(c.callsign))
+    : CARGO_CARRIERS;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+// ── GREAT CIRCLE ARC (for air legs) ──
+function greatCircleArc(lat1, lon1, lat2, lon2, segments = 50) {
+  const toRad = d => d * Math.PI / 180;
+  const toDeg = r => r * 180 / Math.PI;
+  const pts = [];
+  for (let i = 0; i <= segments; i++) {
+    const f = i / segments;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2)**2;
+    const d = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    if (d === 0) { pts.push([lat1, lon1]); continue; }
+    const A = Math.sin((1-f)*d) / Math.sin(d);
+    const B = Math.sin(f*d) / Math.sin(d);
+    const x = A * Math.cos(toRad(lat1)) * Math.cos(toRad(lon1)) + B * Math.cos(toRad(lat2)) * Math.cos(toRad(lon2));
+    const y = A * Math.cos(toRad(lat1)) * Math.sin(toRad(lon1)) + B * Math.cos(toRad(lat2)) * Math.sin(toRad(lon2));
+    const z = A * Math.sin(toRad(lat1)) + B * Math.sin(toRad(lat2));
+    pts.push([toDeg(Math.atan2(z, Math.sqrt(x*x + y*y))), toDeg(Math.atan2(y, x))]);
+  }
+  return pts;
+}
+
+// ── MAP TILE LAYERS ──
+let seaLayer = null;
+let railLayer = null;
+
+function showSeaLayer() {
+  if (!seaLayer) {
+    seaLayer = L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', { maxZoom: 18, opacity: 0.6 }).addTo(map);
+  }
+}
+
+function showRailLayer() {
+  if (!railLayer) {
+    railLayer = L.tileLayer('https://{s}.tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png', { maxZoom: 18, opacity: 0.4, subdomains: 'abc' }).addTo(map);
+  }
+}
+
+function hideOverlayLayers() {
+  if (seaLayer) { map.removeLayer(seaLayer); seaLayer = null; }
+  if (railLayer) { map.removeLayer(railLayer); railLayer = null; }
+}
+
+// ── DESTINATIONS ──
+const DESTINATIONS = {
+  // US Domestic
+  las_vegas:    { lat: 36.1699, lon: -115.1398, name: 'Las Vegas, NV', region: 'us' },
+  new_york:     { lat: 40.7128, lon: -74.0060,  name: 'New York, NY', region: 'us' },
+  chicago:      { lat: 41.8781, lon: -87.6298,  name: 'Chicago, IL', region: 'us' },
+  houston:      { lat: 29.7604, lon: -95.3698,  name: 'Houston, TX', region: 'us' },
+  miami:        { lat: 25.7617, lon: -80.1918,  name: 'Miami, FL', region: 'us' },
+  seattle:      { lat: 47.6062, lon: -122.3321, name: 'Seattle, WA', region: 'us' },
+  denver:       { lat: 39.7392, lon: -104.9903, name: 'Denver, CO', region: 'us' },
+  atlanta:      { lat: 33.7490, lon: -84.3880,  name: 'Atlanta, GA', region: 'us' },
+  dallas:       { lat: 32.7767, lon: -96.7970,  name: 'Dallas, TX', region: 'us' },
+  phoenix:      { lat: 33.4484, lon: -112.0740, name: 'Phoenix, AZ', region: 'us' },
+  // Europe
+  london:       { lat: 51.5074, lon: -0.1278,   name: 'London, UK', region: 'europe' },
+  paris:        { lat: 48.8566, lon: 2.3522,    name: 'Paris, France', region: 'europe' },
+  frankfurt:    { lat: 50.1109, lon: 8.6821,    name: 'Frankfurt, Germany', region: 'europe' },
+  amsterdam:    { lat: 52.3676, lon: 4.9041,    name: 'Amsterdam, Netherlands', region: 'europe' },
+  // Asia
+  tokyo:        { lat: 35.6762, lon: 139.6503,  name: 'Tokyo, Japan', region: 'asia' },
+  shanghai:     { lat: 31.2304, lon: 121.4737,  name: 'Shanghai, China', region: 'asia' },
+  singapore:    { lat: 1.3521,  lon: 103.8198,  name: 'Singapore', region: 'asia' },
+  seoul:        { lat: 37.5665, lon: 126.9780,  name: 'Seoul, South Korea', region: 'asia' },
+  mumbai:       { lat: 19.0760, lon: 72.8777,   name: 'Mumbai, India', region: 'asia' },
+  // Middle East
+  dubai:        { lat: 25.2048, lon: 55.2708,   name: 'Dubai, UAE', region: 'mideast' },
+  // South America
+  sao_paulo:    { lat: -23.5505, lon: -46.6333, name: 'São Paulo, Brazil', region: 'south_america' },
+  bogota:       { lat: 4.7110,  lon: -74.0721,  name: 'Bogotá, Colombia', region: 'south_america' },
+  // Oceania
+  sydney:       { lat: -33.8688, lon: 151.2093, name: 'Sydney, Australia', region: 'oceania' },
+};
+
+const ORIGIN = { lat: 34.0522, lon: -118.2437, name: 'Los Angeles, CA' };
+const LAX = { lat: 33.9425, lon: -118.4081, name: 'LAX Airport' };
+
+// Populate destination dropdown with optgroups
+(function() {
+  const sel = document.getElementById('destSelect');
+  const groups = {
+    'United States': [], 'Europe': [], 'Asia': [], 'Middle East': [], 'South America': [], 'Oceania': []
+  };
+  const regionMap = { us: 'United States', europe: 'Europe', asia: 'Asia', mideast: 'Middle East', south_america: 'South America', oceania: 'Oceania' };
+  for (const [k, v] of Object.entries(DESTINATIONS)) {
+    groups[regionMap[v.region]].push({ key: k, name: v.name });
+  }
+  for (const [label, cities] of Object.entries(groups)) {
+    if (cities.length === 0) continue;
+    const og = document.createElement('optgroup');
+    og.label = label;
+    cities.forEach(c => { const o = document.createElement('option'); o.value = c.key; o.textContent = c.name; og.appendChild(o); });
+    sel.appendChild(og);
+  }
+  sel.value = 'las_vegas';
+})();
+
+document.getElementById('pickupDate').valueAsDate = new Date();
+
+// ── ROUTE PROFILES ──
+async function buildCheckpoints(destKey) {
+  const d = DESTINATIONS[destKey];
+  const city = d.name.split(',')[0];
+
+  if (d.region === 'us') {
+    const realStations = await fetchWeighStationsAlongRoute(ORIGIN.lat, ORIGIN.lon, d.lat, d.lon);
+    const ws1 = realStations[0] || { lat: ORIGIN.lat + (d.lat - ORIGIN.lat) * 0.35, lon: ORIGIN.lon + (d.lon - ORIGIN.lon) * 0.35, name: 'Highway Weigh Station' };
+    const ws2 = realStations[1] || null;
+
+    const cps = [
+      { label: 'CREATED', type: 0, lat: ORIGIN.lat, lon: ORIGIN.lon, locName: ORIGIN.name, dur: 0, transport: 'truck', bundle: { event: 'CREATED' } },
+      { label: 'LOADED', type: 1, lat: ORIGIN.lat, lon: ORIGIN.lon, locName: ORIGIN.name, dur: 0, transport: 'truck', bundle: { event: 'LOADED', method: 'Semi Truck' } },
+      { label: 'WEIGH STATION', type: 7, lat: ws1.lat, lon: ws1.lon, locName: ws1.name, dur: 3500, transport: 'truck', bundle: { event: 'WEIGH_STATION', method: 'Semi Truck', weighStation: { weight_lbs: 42000, axles: 5, overweight: false } } },
+    ];
+    if (ws2) {
+      cps.push({ label: 'WEIGH STATION 2', type: 7, lat: ws2.lat, lon: ws2.lon, locName: ws2.name, dur: 3000, transport: 'truck', bundle: { event: 'WEIGH_STATION', method: 'Semi Truck', weighStation: { weight_lbs: 41800, axles: 5, overweight: false } } });
+    }
+    cps.push({ label: 'DELIVERED', type: 5, lat: d.lat, lon: d.lon, locName: d.name, dur: 4500, transport: 'truck', bundle: { event: 'DELIVERED', method: 'Semi Truck' } });
+    return cps;
+  }
+
+  if (d.region === 'europe') {
+    const carrier = pickCargoCarrier('europe');
+    const railTerminals = await fetchOverpassRailTerminals(d.lat, d.lon);
+    const railHub = railTerminals[0] || { lat: d.lat + 0.02, lon: d.lon - 0.03, name: city + ' Rail Hub' };
+    return [
+      { label: 'CREATED', type: 0, lat: ORIGIN.lat, lon: ORIGIN.lon, locName: ORIGIN.name, dur: 0, transport: 'truck', bundle: { event: 'CREATED' } },
+      { label: 'LOADED', type: 1, lat: ORIGIN.lat, lon: ORIGIN.lon, locName: ORIGIN.name, dur: 0, transport: 'truck', bundle: { event: 'LOADED', method: 'Semi Truck' } },
+      { label: 'DEPART LAX', type: 13, lat: LAX.lat, lon: LAX.lon, locName: 'LAX International', dur: 2500, transport: 'air', bundle: { event: 'AIRPORT_DEPARTURE', method: 'Cargo Air — ' + carrier.name, carrier: carrier.callsign, aircraft: carrier.aircraft, flight: carrier.callsign + ' ' + carrier.aircraft + ' LAX → ' + city } },
+      { label: 'CUSTOMS CLEARED', type: 3, lat: d.lat + 0.05, lon: d.lon + 0.05, locName: city + ' Airport Customs', dur: 4000, transport: 'ground', bundle: { event: 'CUSTOMS_CLEARED', method: 'Customs Authority' } },
+      { label: 'RAIL TRANSFER', type: 15, lat: railHub.lat, lon: railHub.lon, locName: railHub.name, dur: 2500, transport: 'rail', bundle: { event: 'RAIL_TRANSFER', method: 'Freight Rail' } },
+      { label: 'DELIVERED', type: 5, lat: d.lat, lon: d.lon, locName: d.name, dur: 2000, transport: 'truck', bundle: { event: 'DELIVERED', method: 'Local Courier' } },
+    ];
+  }
+
+  if (d.region === 'asia') {
+    const carrier = pickCargoCarrier('asia');
+    return [
+      { label: 'CREATED', type: 0, lat: ORIGIN.lat, lon: ORIGIN.lon, locName: ORIGIN.name, dur: 0, transport: 'truck', bundle: { event: 'CREATED' } },
+      { label: 'LOADED', type: 1, lat: ORIGIN.lat, lon: ORIGIN.lon, locName: ORIGIN.name, dur: 0, transport: 'truck', bundle: { event: 'LOADED', method: 'Semi Truck' } },
+      { label: 'DEPART LAX', type: 13, lat: LAX.lat, lon: LAX.lon, locName: 'LAX International', dur: 2500, transport: 'air', bundle: { event: 'AIRPORT_DEPARTURE', method: 'Cargo Air — ' + carrier.name, carrier: carrier.callsign, aircraft: carrier.aircraft } },
+      { label: 'CUSTOMS CLEARED', type: 3, lat: d.lat + 0.03, lon: d.lon - 0.02, locName: city + ' Customs', dur: 4500, transport: 'ground', bundle: { event: 'CUSTOMS_CLEARED', method: 'Customs Authority' } },
+      { label: 'WAREHOUSE', type: 16, lat: d.lat - 0.02, lon: d.lon + 0.01, locName: city + ' Distribution Center', dur: 2000, transport: 'truck', bundle: { event: 'WAREHOUSE_RECEIVED', method: 'Warehouse' } },
+      { label: 'DELIVERED', type: 5, lat: d.lat, lon: d.lon, locName: d.name, dur: 2500, transport: 'truck', bundle: { event: 'DELIVERED', method: 'Local Delivery' } },
+    ];
+  }
+
+  if (d.region === 'south_america') {
+    const portLA = { lat: 33.7361, lon: -118.2642, name: 'Port of Long Beach' };
+    const destPorts = await fetchOverpassPorts(d.lat, d.lon);
+    const arrivalPort = destPorts[0] || { lat: d.lat - 0.05, lon: d.lon + 0.03, name: city + ' Port' };
+    return [
+      { label: 'CREATED', type: 0, lat: ORIGIN.lat, lon: ORIGIN.lon, locName: ORIGIN.name, dur: 0, transport: 'truck', bundle: { event: 'CREATED' } },
+      { label: 'LOADED', type: 1, lat: ORIGIN.lat, lon: ORIGIN.lon, locName: ORIGIN.name, dur: 0, transport: 'truck', bundle: { event: 'LOADED', method: 'Semi Truck' } },
+      { label: 'PORT DEPARTURE', type: 11, lat: portLA.lat, lon: portLA.lon, locName: portLA.name, dur: 2500, transport: 'sea', bundle: { event: 'PORT_DEPARTURE', method: 'Container Ship' } },
+      { label: 'SEA TRANSIT', type: 17, lat: (portLA.lat + d.lat) / 2, lon: (portLA.lon + d.lon) / 2, locName: 'Pacific Ocean — In Transit', dur: 4000, transport: 'sea', bundle: { event: 'SEA_TRANSIT', method: 'Container Ship' } },
+      { label: 'PORT ARRIVAL', type: 12, lat: arrivalPort.lat, lon: arrivalPort.lon, locName: arrivalPort.name, dur: 3000, transport: 'sea', bundle: { event: 'PORT_ARRIVAL', method: 'Container Ship' } },
+      { label: 'CUSTOMS CLEARED', type: 3, lat: d.lat - 0.02, lon: d.lon + 0.01, locName: city + ' Customs', dur: 2000, transport: 'ground', bundle: { event: 'CUSTOMS_CLEARED', method: 'Customs Authority' } },
+      { label: 'DELIVERED', type: 5, lat: d.lat, lon: d.lon, locName: d.name, dur: 2000, transport: 'truck', bundle: { event: 'DELIVERED', method: 'Local Courier' } },
+    ];
+  }
+
+  // mideast, oceania — cargo air freight
+  const carrier = pickCargoCarrier(d.region);
+  return [
+    { label: 'CREATED', type: 0, lat: ORIGIN.lat, lon: ORIGIN.lon, locName: ORIGIN.name, dur: 0, transport: 'truck', bundle: { event: 'CREATED' } },
+    { label: 'LOADED', type: 1, lat: ORIGIN.lat, lon: ORIGIN.lon, locName: ORIGIN.name, dur: 0, transport: 'truck', bundle: { event: 'LOADED', method: 'Semi Truck' } },
+    { label: 'DEPART LAX', type: 13, lat: LAX.lat, lon: LAX.lon, locName: 'LAX International', dur: 2500, transport: 'air', bundle: { event: 'AIRPORT_DEPARTURE', method: 'Cargo Air — ' + carrier.name, carrier: carrier.callsign, aircraft: carrier.aircraft } },
+    { label: 'CUSTOMS CLEARED', type: 3, lat: d.lat + 0.03, lon: d.lon - 0.02, locName: city + ' Customs', dur: 4500, transport: 'ground', bundle: { event: 'CUSTOMS_CLEARED', method: 'Customs Authority' } },
+    { label: 'DELIVERED', type: 5, lat: d.lat, lon: d.lon, locName: d.name, dur: 3000, transport: 'truck', bundle: { event: 'DELIVERED', method: 'Local Delivery' } },
+  ];
+}
+
+// ── STATE ──
+let shipments = [];
+let selectedShipment = null;
+
+// ── MAP ──
+const map = L.map('map', { zoomControl: false }).setView([20, 0], 2);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+setTimeout(() => map.invalidateSize(), 300);
+window.addEventListener('resize', () => map.invalidateSize());
+
+let routeLine = null, mapMarkers = [], dot = null, animFrame = null;
+
+function clearMapLayers() {
+  if (routeLine) map.removeLayer(routeLine);
+  mapMarkers.forEach(m => map.removeLayer(m));
+  if (dot) map.removeLayer(dot);
+  hideOverlayLayers();
+  hideWeatherRadar();
+  if (animFrame) cancelAnimationFrame(animFrame);
+  mapMarkers = []; routeLine = null; dot = null;
+}
+
+// ── TABS ──
+function switchTab(name, el) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.ptab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  if (el) el.classList.add('active');
+  if (name === 'shipments') renderShipments();
+  if (name === 'chain') renderChainOps();
+}
+
+function updateStats() {
+  document.getElementById('statTotal').textContent = shipments.length;
+  document.getElementById('statTransit').textContent = shipments.filter(s => s.status === 'in_transit').length;
+  document.getElementById('statExceptions').textContent = shipments.filter(s => s.status === 'exception').length;
+  document.getElementById('statDelivered').textContent = shipments.filter(s => s.status === 'delivered').length;
+}
+
+// ── SHIPMENTS TAB ──
+function renderShipments() {
+  const q = (document.getElementById('shipSearch')?.value || '').toLowerCase();
+  const list = document.getElementById('shipList');
+  const filtered = shipments.filter(s => !q || s.id.toLowerCase().includes(q) || s.origin.toLowerCase().includes(q) || s.destination.toLowerCase().includes(q) || s.cargo.toLowerCase().includes(q));
+  list.innerHTML = filtered.length === 0
+    ? '<div style="padding:2rem; text-align:center; color:rgba(255,255,255,0.2); font-size:0.65rem;">No shipments yet. Run a simulation.</div>'
+    : filtered.map(s => `
+      <div class="ship-item ${selectedShipment?.id===s.id?'selected':''}" onclick="selectShipment('${s.id}')">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div class="ship-id">${s.id.slice(0,10)}...${s.id.slice(-4)}</div>
+          <span class="ship-badge ${s.status}">${s.status.replace('_',' ')}</span>
+        </div>
+        <div class="ship-route">${s.origin} → ${s.destination}</div>
+        <div class="ship-meta"><span>${s.cargo}</span><span>${s.checkpoints.length} checkpoints</span></div>
+        <div style="margin-top:0.3rem;"><a href="${DRIVER_BASE}?id=${encodeURIComponent(s.id)}" target="_blank" style="font-size:0.5rem;color:#f59e0b;text-decoration:none;">Driver Check-In →</a></div>
+      </div>`).join('');
+}
+
+function selectShipment(id) {
+  selectedShipment = shipments.find(s => s.id === id) || null;
+  renderShipments();
+  renderChainOps();
+  if (selectedShipment) showShipmentOnMap(selectedShipment);
+}
+
+function showShipmentOnMap(s) {
+  clearMapLayers();
+  const pts = s.checkpoints.map(cp => [cp.lat, cp.lon]);
+  if (pts.length < 2) return;
+  routeLine = L.polyline(pts, { color: 'rgba(245,158,11,0.5)', weight: 2, dashArray: '8 6' }).addTo(map);
+  pts.forEach((p, i) => {
+    const cp = s.checkpoints[i];
+    const color = cp.eventLabel === 'DELIVERED' ? '#34d399' : cp.type === 3 ? '#f59e0b' : cp.type === 2 ? '#8b5cf6' : '#60a5fa';
+    mapMarkers.push(L.circleMarker(p, { radius: 5, color, fillColor: color, fillOpacity: 0.8, weight: 1 }).addTo(map).bindTooltip(cp.eventLabel + ': ' + cp.locName, { direction: 'top' }));
+  });
+  map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
+}
+
+// ── CHAIN OPS ──
+function renderChainOps() {
+  const el = document.getElementById('chainContent');
+  if (!selectedShipment) {
+    el.innerHTML = '<div class="chain-section"><div class="chain-label">Contract</div><a class="chain-link" href="https://sepolia.basescan.org/address/0x289ee93a1717fbef60add4f630ed8356b7a7e8d3" target="_blank">0x289ee9...e8d3</a></div><div class="chain-section" style="color:rgba(255,255,255,0.25);font-size:0.65rem;text-align:center;padding-top:2rem;">Select a shipment to view on-chain data</div>';
+    return;
+  }
+  const s = selectedShipment;
+  el.innerHTML = `
+    <div class="chain-section" style="border-bottom:1px solid rgba(255,255,255,0.06);"><div class="chain-label">Contract</div><a class="chain-link" href="https://sepolia.basescan.org/address/0x289ee93a1717fbef60add4f630ed8356b7a7e8d3" target="_blank">0x289ee9...e8d3</a></div>
+    <div class="chain-section" style="border-bottom:1px solid rgba(255,255,255,0.06);"><div class="chain-label">Shipment Hash</div><div class="chain-mono">${s.id}</div></div>
+    <div class="chain-section"><div class="chain-label">On-Chain Checkpoints (${s.checkpoints.length})</div>
+    ${s.checkpoints.map(cp => {
+      const cls = cp.type===5?'green':cp.type===3?'amber':cp.type===2?'purple':cp.type===1?'blue':'gray';
+      return `<div class="chain-cp"><div class="chain-cp-type ${cls}">${cp.eventLabel}</div>
+        <div class="chain-cp-row"><span class="chain-cp-key">Location</span><span class="chain-cp-val">${cp.locName}</span></div>
+        <div class="chain-cp-row"><span class="chain-cp-key">Block</span><span class="chain-cp-val">#${cp.blockNumber}</span></div>
+        <div class="chain-cp-row"><span class="chain-cp-key">Tx</span><span class="chain-cp-val"><a class="chain-link" href="https://sepolia.basescan.org/tx/${cp.txHash}" target="_blank">${cp.txHash.slice(0,14)}...${cp.txHash.slice(-6)}</a></span></div>
+        <button class="verify-btn" onclick="this.classList.toggle('verified');this.textContent=this.classList.contains('verified')?'✓ Hash Verified':'Verify Data Integrity'">Verify Data Integrity</button></div>`;
+    }).join('')}</div>`;
+}
+
+// ── CORTEX ──
+async function sendCortex() {
+  const input = document.getElementById('cortexInput');
+  const msg = input.value.trim();
+  if (!msg) return;
+  const msgs = document.getElementById('cortexMessages');
+  msgs.innerHTML += `<div class="cmsg user">${esc(msg)}</div>`;
+  input.value = '';
+  msgs.innerHTML += `<div class="cmsg assistant" id="cortexLoading" style="color:rgba(255,255,255,0.3)">...</div>`;
+  msgs.scrollTop = msgs.scrollHeight;
+  document.getElementById('cortexSendBtn').disabled = true;
+  try {
+    const res = await fetch(SB_CORTEX, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg }) });
+    const data = await res.json();
+    document.getElementById('cortexLoading')?.remove();
+    msgs.innerHTML += `<div class="cmsg assistant">${esc(data.response || data.error || 'No response')}</div>`;
+  } catch (e) {
+    document.getElementById('cortexLoading')?.remove();
+    msgs.innerHTML += `<div class="cmsg assistant">Connection error.</div>`;
+  }
+  document.getElementById('cortexSendBtn').disabled = false;
+  msgs.scrollTop = msgs.scrollHeight;
+}
+function esc(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+// ── SIMULATION ──
+function genId() { const a = new Uint8Array(32); crypto.getRandomValues(a); return '0x' + Array.from(a).map(b => b.toString(16).padStart(2,'0')).join(''); }
+
+let currentQrDataUrl = null;
+let currentShipmentIdForCopy = null;
+
+function generateQR(shipmentId) {
+  const url = TRACK_BASE + '?id=' + encodeURIComponent(shipmentId);
+  const qr = qrcode(0, 'M');
+  qr.addData(url);
+  qr.make();
+  const el = document.getElementById('qrCode');
+  el.innerHTML = qr.createImgTag(3, 4);
+  el.querySelector('img').style.borderRadius = '4px';
+  document.getElementById('qrArea').style.display = 'block';
+  currentShipmentIdForCopy = shipmentId;
+  // Get data URL for email
+  const canvas = document.createElement('canvas');
+  const size = qr.getModuleCount() * 4 + 8;
+  canvas.width = size; canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, size, size);
+  for (let r = 0; r < qr.getModuleCount(); r++) {
+    for (let c = 0; c < qr.getModuleCount(); c++) {
+      if (qr.isDark(r, c)) { ctx.fillStyle = '#000'; ctx.fillRect(c * 4 + 4, r * 4 + 4, 4, 4); }
+    }
+  }
+  currentQrDataUrl = canvas.toDataURL('image/png');
+}
+
+function copyShipmentId() {
+  if (currentShipmentIdForCopy) {
+    navigator.clipboard.writeText(currentShipmentIdForCopy);
+    const btn = document.getElementById('copyIdBtn');
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy Shipment ID', 1500);
+  }
+}
+
+async function sendNotify(params) {
+  try {
+    await fetch(SB_NOTIFY, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(params) });
+  } catch (e) { console.warn('Notify failed:', e); }
+}
+
+async function recordCP(shipmentId, eventType, location, bundle, retries = 2) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(SB_SIM, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ shipmentId, eventType, location, bundle }) });
+      if (res.ok) return res.json();
+      const errText = await res.text();
+      if (attempt < retries) {
+        setStatus('Retry ' + (attempt + 1) + '...');
+        await new Promise(r => setTimeout(r, 2000));
+        continue;
+      }
+      throw new Error('Chain write failed: ' + errText);
+    } catch (e) {
+      if (attempt < retries) {
+        setStatus('Connection lost — retrying in 2s...');
+        await new Promise(r => setTimeout(r, 2000));
+        continue;
+      }
+      throw e;
+    }
+  }
+}
+
+function addFeedCard(label, result) {
+  const feed = document.getElementById('feed');
+  if (feed.querySelector('.feed-empty')) feed.innerHTML = '';
+  const card = document.createElement('div');
+  card.className = 'cp-card active';
+  card.innerHTML = `<div class="cp-label">${label}</div><div class="cp-hash"><a href="https://sepolia.basescan.org/tx/${result.txHash}" target="_blank">TX: ${result.txHash.slice(0,10)}...${result.txHash.slice(-6)}</a></div><div class="cp-block">Block #${result.blockNumber}</div>`;
+  feed.appendChild(card);
+  feed.scrollLeft = feed.scrollWidth;
+  setTimeout(() => { card.classList.remove('active'); card.classList.add('done'); }, 2000);
+}
+
+function setStatus(msg) { document.getElementById('simStatus').textContent = msg; }
+
+function animateDot(from, to, dur) {
+  return new Promise(resolve => {
+    const st = performance.now();
+    function step(now) {
+      const t = Math.min((now - st) / dur, 1);
+      const e = t < 0.5 ? 2*t*t : -1+(4-2*t)*t;
+      dot.setLatLng([from[0]+(to[0]-from[0])*e, from[1]+(to[1]-from[1])*e]);
+      if (t < 1) animFrame = requestAnimationFrame(step);
+      else resolve();
+    }
+    animFrame = requestAnimationFrame(step);
+  });
+}
+
+async function startSimulation() {
+  const btn = document.getElementById('simBtn');
+  btn.disabled = true;
+
+  const destKey = document.getElementById('destSelect').value;
+  const cargo = document.getElementById('cargoSelect').value;
+  const pickupDate = document.getElementById('pickupDate').value;
+  const dest = DESTINATIONS[destKey];
+  const shipmentId = genId();
+  const notifyEmail = document.getElementById('notifyEmail').value.trim();
+  setStatus('Building route with live data...');
+  const checkpoints = await buildCheckpoints(destKey);
+
+  generateQR(shipmentId);
+  clearMapLayers();
+  document.getElementById('feed').innerHTML = '<div class="feed-empty">Anchoring to Base Sepolia...</div>';
+
+  // Build pipeline
+  const pipEl = document.getElementById('pipeline');
+  pipEl.innerHTML = checkpoints.map(cp => `<div class="pip-step" data-step="${cp.label}">${cp.label}</div>`).join('');
+
+  // Draw route with transport-aware rendering
+  hideOverlayLayers();
+  const pts = checkpoints.map(cp => [cp.lat, cp.lon]);
+  const hasAir = checkpoints.some(cp => cp.transport === 'air');
+  const hasSea = checkpoints.some(cp => cp.transport === 'sea');
+  const hasRail = checkpoints.some(cp => cp.transport === 'rail');
+
+  if (hasSea) showSeaLayer();
+  if (hasRail) showRailLayer();
+
+  // Draw segments between checkpoints with transport-specific styling
+  const allRoutePts = [];
+  for (let i = 0; i < checkpoints.length - 1; i++) {
+    const from = checkpoints[i];
+    const to = checkpoints[i + 1];
+    const isAirLeg = from.transport === 'air' || to.transport === 'air';
+    const isSeaLeg = from.transport === 'sea' || to.transport === 'sea';
+    const isRailLeg = from.transport === 'rail' || to.transport === 'rail';
+    const isTruckLeg = !isAirLeg && !isSeaLeg && !isRailLeg;
+
+    let segPts;
+    let style;
+    let etaLabel = null;
+
+    if (isAirLeg) {
+      segPts = greatCircleArc(from.lat, from.lon, to.lat, to.lon, 60);
+      style = { color: 'rgba(96,165,250,0.6)', weight: 2, dashArray: '12 8' };
+      const midIdx = Math.floor(segPts.length / 2);
+      const carrier = from.bundle?.carrier || to.bundle?.carrier || 'CARGO';
+      const aircraft = from.bundle?.aircraft || to.bundle?.aircraft || '';
+      mapMarkers.push(L.marker(segPts[midIdx], { icon: L.divIcon({ className: '', html: `<div style="font-size:0.5rem;color:#60a5fa;font-family:monospace;white-space:nowrap;text-shadow:0 0 6px rgba(0,0,0,0.8);">✈ ${carrier} ${aircraft}</div>`, iconSize: [120, 16], iconAnchor: [60, 8] }) }).addTo(map));
+    } else if (isSeaLeg) {
+      segPts = greatCircleArc(from.lat, from.lon, to.lat, to.lon, 40);
+      style = { color: 'rgba(56,189,248,0.5)', weight: 2, dashArray: '6 10' };
+    } else if (isRailLeg) {
+      segPts = [[from.lat, from.lon], [to.lat, to.lon]];
+      style = { color: 'rgba(139,92,246,0.6)', weight: 2, dashArray: '4 4' };
+    } else {
+      // Truck leg — ORS for road geometry + Mapbox for traffic-aware ETA
+      const [orsRoute, mbTraffic] = await Promise.all([
+        fetchORSRoute(from.lon, from.lat, to.lon, to.lat),
+        fetchMapboxTrafficETA(from.lon, from.lat, to.lon, to.lat),
+      ]);
+      if (orsRoute && orsRoute.polyline.length > 2) {
+        segPts = orsRoute.polyline;
+        const etaDuration = mbTraffic?.duration_traffic_min || orsRoute.duration_min;
+        const etaDist = mbTraffic?.distance_km || orsRoute.distance_km;
+        const trafficTag = mbTraffic ? ` · Traffic: ${mbTraffic.congestion_label}` : '';
+        etaLabel = etaDuration ? `🚛 ${etaDist} km · ${etaDuration} min${trafficTag}` : null;
+      } else {
+        segPts = [[from.lat, from.lon], [to.lat, to.lon]];
+      }
+      const trafficColor = mbTraffic?.congestion_pct > 30 ? 'rgba(239,68,68,0.7)' : mbTraffic?.congestion_pct > 10 ? 'rgba(245,158,11,0.7)' : 'rgba(52,211,153,0.6)';
+      style = { color: mbTraffic ? trafficColor : 'rgba(245,158,11,0.6)', weight: 3, dashArray: null };
+    }
+
+    const line = L.polyline(segPts, style).addTo(map);
+    mapMarkers.push(line);
+    allRoutePts.push(...segPts);
+
+    if (etaLabel && segPts.length > 2) {
+      const midPt = segPts[Math.floor(segPts.length / 2)];
+      mapMarkers.push(L.marker(midPt, { icon: L.divIcon({ className: '', html: `<div style="font-size:0.5rem;color:#f59e0b;font-family:monospace;white-space:nowrap;text-shadow:0 0 6px rgba(0,0,0,0.8);">${etaLabel}</div>`, iconSize: [150, 16], iconAnchor: [75, 8] }) }).addTo(map));
+    }
+  }
+
+  routeLine = L.polyline(allRoutePts, { opacity: 0 }).addTo(map);
+
+  // Transport-aware checkpoint markers
+  const transportColors = { truck: '#f59e0b', air: '#60a5fa', sea: '#38bdf8', rail: '#8b5cf6', ground: '#a1a1aa' };
+  checkpoints.forEach(cp => {
+    const color = cp.type === 5 ? '#34d399' : cp.type === 3 ? '#f59e0b' : (transportColors[cp.transport] || '#60a5fa');
+    const tooltipText = cp.bundle?.carrier ? `${cp.label} — ${cp.bundle.method}` : cp.label;
+    mapMarkers.push(L.circleMarker([cp.lat, cp.lon], { radius: 5, color, fillColor: color, fillOpacity: 0.7, weight: 1 }).addTo(map).bindTooltip(tooltipText, { direction: 'top' }));
+  });
+
+  dot = L.circleMarker(pts[0], { radius: 4, color: '#fff', fillColor: '#fff', fillOpacity: 1, weight: 2 }).addTo(map);
+  map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
+
+  // ── FETCH LIVE DATA (parallel, non-blocking) ──
+  setStatus('Fetching live weather, traffic & road data...');
+  const [weatherOrigin, weatherDest, quakes, truckStops, owmOrigin, owmDest] = await Promise.all([
+    fetchNOAAAlerts(ORIGIN.lat, ORIGIN.lon),
+    fetchNOAAAlerts(dest.lat, dest.lon),
+    fetchUSGSQuakes((ORIGIN.lat + dest.lat) / 2, (ORIGIN.lon + dest.lon) / 2),
+    fetchOverpassStops(ORIGIN.lat, ORIGIN.lon),
+    fetchOWMWeather(ORIGIN.lat, ORIGIN.lon),
+    fetchOWMWeather(dest.lat, dest.lon),
+  ]);
+
+  // Show weather radar overlay
+  showWeatherRadar();
+
+  // Fetch live cargo flights for international air routes
+  if (hasAir) {
+    const bounds = routeLine.getBounds();
+    const cargoFlights = await fetchCargoFlights(
+      Math.min(bounds.getSouth(), bounds.getNorth()) - 5,
+      Math.min(bounds.getWest(), bounds.getEast()) - 5,
+      Math.max(bounds.getSouth(), bounds.getNorth()) + 5,
+      Math.max(bounds.getWest(), bounds.getEast()) + 5
+    );
+    cargoFlights.forEach(f => {
+      const rotateStyle = f.heading ? `transform:rotate(${f.heading}deg);` : '';
+      mapMarkers.push(L.marker([f.lat, f.lon], {
+        icon: L.divIcon({
+          className: '',
+          html: `<div style="display:flex;flex-direction:column;align-items:center;">
+            <div style="font-size:12px;${rotateStyle}">✈</div>
+            <div style="font-size:0.4rem;color:#60a5fa;font-family:monospace;white-space:nowrap;text-shadow:0 0 4px rgba(0,0,0,0.9);">${f.callsign} ${f.altitude_m ? Math.round(f.altitude_m * 3.28084/1000) + 'kft' : ''}</div>
+          </div>`,
+          iconSize: [80, 30],
+          iconAnchor: [40, 15],
+        })
+      }).addTo(map));
+    });
+    if (cargoFlights.length > 0) setStatus(`${cargoFlights.length} cargo aircraft in corridor`);
+  }
+
+  const allWeather = [...weatherOrigin, ...weatherDest];
+  const weatherSummary = allWeather.length > 0
+    ? allWeather.map(a => `${a.event} (${a.severity}): ${a.headline}`).join('; ')
+    : 'No active weather alerts';
+  const quakeSummary = quakes.length > 0
+    ? quakes.map(q => `M${q.mag} ${q.place}`).join('; ')
+    : null;
+
+  const owmSummary = {
+    origin: owmOrigin ? `${owmOrigin.city}: ${owmOrigin.temp_f}°F ${owmOrigin.description}, wind ${owmOrigin.wind_mph}mph, visibility ${owmOrigin.visibility_mi}mi` : null,
+    destination: owmDest ? `${owmDest.city}: ${owmDest.temp_f}°F ${owmDest.description}, wind ${owmDest.wind_mph}mph, visibility ${owmDest.visibility_mi}mi` : null,
+  };
+
+  // Show truck stops on map
+  truckStops.forEach(s => {
+    mapMarkers.push(L.circleMarker([s.lat, s.lon], { radius: 2.5, color: '#6366f1', fillColor: '#6366f1', fillOpacity: 0.5, weight: 1 }).addTo(map).bindTooltip(s.name, { direction: 'top' }));
+  });
+
+  // Show weather conditions at origin/dest
+  if (owmOrigin) {
+    const iconUrl = `https://openweathermap.org/img/wn/${owmOrigin.icon}.png`;
+    mapMarkers.push(L.marker([ORIGIN.lat + 0.3, ORIGIN.lon + 0.3], { icon: L.divIcon({ className: '', html: `<div style="display:flex;align-items:center;gap:2px;background:rgba(0,0,0,0.7);padding:2px 6px;border-radius:4px;white-space:nowrap;"><img src="${iconUrl}" width="20" height="20"><span style="font-size:0.5rem;color:#fff;font-family:monospace;">${owmOrigin.temp_f}°F ${owmOrigin.condition}</span></div>`, iconSize: [120, 24], iconAnchor: [0, 12] }) }).addTo(map));
+  }
+  if (owmDest) {
+    const iconUrl = `https://openweathermap.org/img/wn/${owmDest.icon}.png`;
+    mapMarkers.push(L.marker([dest.lat + 0.3, dest.lon + 0.3], { icon: L.divIcon({ className: '', html: `<div style="display:flex;align-items:center;gap:2px;background:rgba(0,0,0,0.7);padding:2px 6px;border-radius:4px;white-space:nowrap;"><img src="${iconUrl}" width="20" height="20"><span style="font-size:0.5rem;color:#fff;font-family:monospace;">${owmDest.temp_f}°F ${owmDest.condition}</span></div>`, iconSize: [120, 24], iconAnchor: [0, 12] }) }).addTo(map));
+  }
+
+  // Show NOAA alerts
+  if (weatherOrigin.length > 0) {
+    mapMarkers.push(L.circleMarker([ORIGIN.lat, ORIGIN.lon + 0.15], { radius: 4, color: '#f59e0b', fillColor: '#f59e0b', fillOpacity: 0.9, weight: 1 }).addTo(map).bindTooltip('⚠ ' + weatherOrigin[0].event, { permanent: true, direction: 'right', className: '' }));
+  }
+  if (weatherDest.length > 0) {
+    mapMarkers.push(L.circleMarker([dest.lat, dest.lon + 0.15], { radius: 4, color: '#f59e0b', fillColor: '#f59e0b', fillOpacity: 0.9, weight: 1 }).addTo(map).bindTooltip('⚠ ' + weatherDest[0].event, { permanent: true, direction: 'right', className: '' }));
+  }
+
+  const liveData = { weather: weatherSummary, seismic: quakeSummary, truckStopsNearOrigin: truckStops.length, driverLink: DRIVER_BASE + '?id=' + shipmentId, conditions: owmSummary };
+  const baseBundle = { shipmentId, origin: ORIGIN.name, destination: dest.name, cargoType: cargo, pickupDate, carrier: 'IBS Logistics', liveConditions: liveData };
+  const shipment = { id: shipmentId, origin: ORIGIN.name, destination: dest.name, cargo, status: 'created', checkpoints: [], weather: allWeather, truckStops };
+
+  try {
+    for (let i = 0; i < checkpoints.length; i++) {
+      const cp = checkpoints[i];
+      const pipStep = document.querySelector(`[data-step="${cp.label}"]`);
+      if (pipStep) pipStep.classList.add('active');
+
+      if (cp.dur > 0 && i > 0) {
+        setStatus('In transit → ' + cp.label + '...');
+        await animateDot(pts[i - 1], pts[i], cp.dur);
+      }
+
+      setStatus('Recording ' + cp.label + ' on-chain...');
+      const result = await recordCP(shipmentId, cp.type, { lat: cp.lat, lon: cp.lon, name: cp.locName }, { ...baseBundle, ...cp.bundle });
+      addFeedCard(cp.label, result);
+      shipment.checkpoints.push({ ...result, eventLabel: cp.label, lat: cp.lat, lon: cp.lon, locName: cp.locName, type: cp.type });
+
+      if (pipStep) { pipStep.classList.remove('active'); pipStep.classList.add('done'); }
+
+      if (cp.type === 1) shipment.status = 'in_transit';
+      if (cp.type === 5) shipment.status = 'delivered';
+
+      if (notifyEmail) {
+        sendNotify({
+          to: notifyEmail,
+          event: cp.bundle.event,
+          shipmentId,
+          origin: ORIGIN.name,
+          destination: dest.name,
+          cargoType: cargo,
+          txHash: result.txHash,
+          blockNumber: result.blockNumber,
+          locationName: cp.locName,
+          qrDataUrl: cp.type === 0 ? currentQrDataUrl : undefined,
+        });
+      }
+    }
+    setStatus('SIMULATION COMPLETE — ALL ANCHORED ON-CHAIN');
+  } catch (err) {
+    setStatus('ERROR: ' + err.message);
+    shipment.status = 'exception';
+  }
+
+  shipments.unshift(shipment);
+  selectedShipment = shipment;
+  updateStats();
+  renderShipments();
+  renderChainOps();
+  btn.disabled = false;
+}
+</script>
+</body>
+</html>

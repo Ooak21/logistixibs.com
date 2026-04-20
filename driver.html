@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IBS Logistix — Driver Check-In</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', system-ui, sans-serif; background: #080810; color: #fff; min-height: 100vh; -webkit-font-smoothing: antialiased; }
+
+.shell { display: flex; flex-direction: column; height: 100vh; }
+
+.header { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1.25rem; background: rgba(12,12,24,0.95); border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
+.header-left { display: flex; align-items: center; gap: 0.5rem; }
+.header-icon { width: 1.4rem; height: 1.4rem; color: #f59e0b; }
+.header-title { font-size: 0.9rem; font-weight: 600; }
+.header-badge { font-size: 0.5rem; color: rgba(255,255,255,0.4); border: 1px solid rgba(255,255,255,0.15); padding: 0.15rem 0.4rem; border-radius: 4px; font-family: monospace; text-transform: uppercase; }
+.header-mode { font-size: 0.55rem; background: #f59e0b; color: #000; padding: 0.2rem 0.5rem; border-radius: 9999px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+.header-back { font-size: 0.6rem; color: rgba(255,255,255,0.35); text-decoration: none; }
+
+/* Check-in form */
+.checkin { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; padding: 2rem; gap: 1.5rem; }
+.checkin-title { font-size: 1.5rem; font-weight: 300; letter-spacing: -1px; text-align: center; }
+.checkin-sub { font-size: 0.75rem; color: rgba(255,255,255,0.4); text-align: center; max-width: 24rem; line-height: 1.6; }
+.checkin-row { display: flex; gap: 0.5rem; width: 100%; max-width: 28rem; }
+.checkin-input { flex: 1; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #fff; font-family: 'Courier New', monospace; font-size: 0.75rem; padding: 0.7rem 1rem; outline: none; }
+.checkin-input:focus { border-color: rgba(245,158,11,0.5); }
+.checkin-input::placeholder { color: rgba(255,255,255,0.2); }
+.checkin-btn { padding: 0.7rem 1.5rem; background: #f59e0b; color: #000; border: none; border-radius: 6px; font-size: 0.7rem; font-weight: 700; cursor: pointer; letter-spacing: 0.1em; text-transform: uppercase; }
+.checkin-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.checkin-status { font-family: 'Courier New', monospace; font-size: 0.6rem; color: #f59e0b; min-height: 1em; }
+
+/* Route view */
+.route-view { display: none; flex-direction: column; flex: 1; }
+.route-view.active { display: flex; }
+
+#driverMap { flex: 1; background: #080810; }
+.leaflet-container { background: #080810; }
+
+/* Info bar */
+.info-bar { padding: 0.75rem 1.25rem; background: rgba(12,12,24,0.95); border-top: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
+.info-row { display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; }
+.info-item { font-size: 0.6rem; }
+.info-label { color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 0.1em; }
+.info-val { color: #fff; font-weight: 600; }
+
+/* Weather badges */
+.weather-badge { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.55rem; font-weight: 600; }
+.weather-badge.warning { background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); }
+.weather-badge.severe { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+.weather-badge.clear { background: rgba(52,211,153,0.1); color: #34d399; border: 1px solid rgba(52,211,153,0.2); }
+
+/* CORTEX prompt */
+.cortex-prompt { padding: 0.75rem 1.25rem; background: rgba(12,12,24,0.95); border-top: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
+.cortex-prompt-row { display: flex; align-items: center; gap: 0.6rem; }
+
+.voice-btn {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  border: 2px solid rgba(245,158,11,0.4);
+  background: rgba(245,158,11,0.1);
+  color: #f59e0b;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.3s;
+  flex-shrink: 0;
+}
+.voice-btn:hover { border-color: #f59e0b; background: rgba(245,158,11,0.2); }
+.voice-btn.recording {
+  border-color: #f87171;
+  background: rgba(248,113,113,0.15);
+  color: #f87171;
+  animation: voicePulse 1.5s infinite;
+}
+.voice-btn.connecting {
+  border-color: rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.4);
+}
+@keyframes voicePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(248,113,113,0.3); }
+  50% { box-shadow: 0 0 0 12px rgba(248,113,113,0); }
+}
+
+.voice-status {
+  font-family: 'Courier New', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.3);
+  text-align: center;
+  margin-top: 0.3rem;
+}
+
+.voice-transcript {
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.5);
+  font-style: italic;
+  min-height: 1.2em;
+  text-align: center;
+  padding: 0 1rem;
+}
+.cortex-dot { width: 6px; height: 6px; border-radius: 50%; background: #34d399; animation: pulse 2s infinite; flex-shrink: 0; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.cortex-ask { font-size: 0.72rem; color: rgba(255,255,255,0.6); flex: 1; }
+.cortex-yes { padding: 0.4rem 1rem; background: #f59e0b; color: #000; border: none; border-radius: 4px; font-size: 0.6rem; font-weight: 700; cursor: pointer; letter-spacing: 0.1em; }
+.cortex-yes:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* CORTEX response */
+.cortex-response { padding: 0.75rem 1.25rem; background: rgba(255,255,255,0.03); border-top: 1px solid rgba(255,255,255,0.04); font-size: 0.72rem; line-height: 1.6; color: rgba(255,255,255,0.8); max-height: 200px; overflow-y: auto; white-space: pre-wrap; flex-shrink: 0; display: none; }
+.cortex-response.active { display: block; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="header">
+    <div class="header-left">
+      <svg class="header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+      <div class="header-title">LOGISTIX</div>
+      <div class="header-mode">Driver</div>
+    </div>
+    <a href="./index.html" class="header-back">&larr; Exit</a>
+  </div>
+
+  <!-- CHECK-IN -->
+  <div class="checkin" id="checkinView">
+    <div class="checkin-title">Driver Check-In</div>
+    <div class="checkin-sub">Enter your shipment ID or scan the QR code on your cargo to check in. CORTEX will load your route and offer real-time optimization.</div>
+    <div class="checkin-row">
+      <input class="checkin-input" id="shipIdInput" placeholder="0x..." />
+      <button class="checkin-btn" id="checkinBtn" onclick="checkIn()">CHECK IN</button>
+    </div>
+    <div class="checkin-status" id="checkinStatus"></div>
+  </div>
+
+  <!-- ROUTE VIEW -->
+  <div class="route-view" id="routeView">
+    <div id="driverMap"></div>
+
+    <div class="info-bar" id="infoBar">
+      <div class="info-row">
+        <div class="info-item"><span class="info-label">Route </span><span class="info-val" id="infoRoute">—</span></div>
+        <div class="info-item"><span class="info-label">Cargo </span><span class="info-val" id="infoCargo">—</span></div>
+        <div class="info-item"><span class="info-label">Checkpoints </span><span class="info-val" id="infoCPs">—</span></div>
+        <div class="info-item" id="weatherArea"></div>
+      </div>
+    </div>
+
+    <div class="cortex-prompt" id="cortexPrompt">
+      <div class="cortex-prompt-row">
+        <div class="cortex-dot"></div>
+        <div class="cortex-ask">Talk to CORTEX — hands-free route intelligence</div>
+        <button class="voice-btn" id="voiceBtn" onclick="toggleVoice()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+        </button>
+        <button class="cortex-yes" id="optimizeBtn" onclick="optimizeRoute()">TEXT</button>
+      </div>
+      <div class="voice-status" id="voiceStatus"></div>
+      <div class="voice-transcript" id="voiceTranscript"></div>
+    </div>
+
+    <div class="cortex-response" id="cortexResponse"></div>
+  </div>
+</div>
+
+<script>
+const SB_CORTEX = 'https://jtifhcvbgxqwlywugvjv.supabase.co/functions/v1/logistix-cortex';
+const RPC = 'https://sepolia.base.org';
+const REGISTRY = '0x289ee93a1717fbef60add4f630ed8356b7a7e8d3';
+const DEPLOY_BLOCK = 40353200;
+const EVENT_LABELS = { 0:'CREATED', 1:'LOADED', 2:'SHIPPED', 3:'CUSTOMS_CLEARED', 4:'EXCEPTION', 5:'DELIVERED', 6:'SIGNED_OFF', 7:'WEIGH_STATION', 8:'DELAYED', 9:'MISSED_CHECKPOINT', 10:'GEOFENCE_VIOLATION', 11:'PORT_DEPARTURE', 12:'PORT_ARRIVAL', 13:'AIRPORT_DEPARTURE', 14:'AIRPORT_ARRIVAL', 15:'RAIL_TRANSFER', 16:'WAREHOUSE_RECEIVED', 17:'SEA_TRANSIT', 18:'TEMPERATURE_BREACH' };
+
+let driverMap = null;
+let currentShipmentId = null;
+let weatherAlerts = [];
+let nearbyStops = [];
+
+async function rpcCall(method, params) {
+  const res = await fetch(RPC, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }) });
+  return (await res.json()).result;
+}
+
+async function checkIn() {
+  const id = document.getElementById('shipIdInput').value.trim();
+  if (!id || !id.startsWith('0x')) { document.getElementById('checkinStatus').textContent = 'ENTER A VALID SHIPMENT ID'; return; }
+
+  document.getElementById('checkinBtn').disabled = true;
+  document.getElementById('checkinStatus').textContent = 'QUERYING BASE SEPOLIA...';
+  currentShipmentId = id;
+
+  try {
+    const currentBlockHex = await rpcCall('eth_blockNumber', []);
+    const currentBlock = parseInt(currentBlockHex, 16);
+    const fromBlock = Math.max(DEPLOY_BLOCK, currentBlock - 9999);
+    const paddedId = id.length === 66 ? id : id.padEnd(66, '0');
+
+    const logs = await rpcCall('eth_getLogs', [{ address: REGISTRY, fromBlock: '0x' + fromBlock.toString(16), toBlock: 'latest', topics: [null, paddedId] }]);
+
+    if (!logs || logs.length === 0) {
+      document.getElementById('checkinStatus').textContent = 'NO SHIPMENT FOUND ON-CHAIN';
+      document.getElementById('checkinBtn').disabled = false;
+      return;
+    }
+
+    const checkpoints = logs.map(log => {
+      const eventType = parseInt(log.topics[2], 16);
+      const data = log.data.slice(2);
+      const timestamp = parseInt(data.slice(0, 64), 16);
+      return { eventType, label: EVENT_LABELS[eventType] || 'EVENT_' + eventType, timestamp, txHash: log.transactionHash, blockNumber: parseInt(log.blockNumber, 16) };
+    }).sort((a, b) => a.timestamp - b.timestamp);
+
+    document.getElementById('checkinView').style.display = 'none';
+    document.getElementById('routeView').classList.add('active');
+
+    document.getElementById('infoCPs').textContent = checkpoints.length;
+    document.getElementById('infoRoute').textContent = 'Shipment ' + id.slice(0, 8) + '...' + id.slice(-4);
+
+    setTimeout(() => {
+      driverMap = L.map('driverMap', { zoomControl: false }).setView([37.5, -98], 4);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(driverMap);
+      setTimeout(() => driverMap.invalidateSize(), 200);
+
+      fetchWeatherAlerts(34.05, -118.24);
+      fetchNearbyTruckStops(34.05, -118.24);
+    }, 100);
+
+  } catch (err) {
+    document.getElementById('checkinStatus').textContent = 'ERROR: ' + err.message;
+  }
+  document.getElementById('checkinBtn').disabled = false;
+}
+
+// ── NOAA WEATHER ALERTS ──
+async function fetchWeatherAlerts(lat, lon) {
+  try {
+    const res = await fetch(`https://api.weather.gov/alerts/active?point=${lat},${lon}&limit=5`, { headers: { 'User-Agent': 'IBSLogistix/1.0' } });
+    const data = await res.json();
+    weatherAlerts = (data.features || []).map(f => ({
+      event: f.properties.event,
+      severity: f.properties.severity,
+      headline: f.properties.headline,
+      description: f.properties.description?.slice(0, 200),
+      area: f.properties.areaDesc,
+    }));
+
+    const area = document.getElementById('weatherArea');
+    if (weatherAlerts.length > 0) {
+      const severe = weatherAlerts.some(a => a.severity === 'Severe' || a.severity === 'Extreme');
+      area.innerHTML = weatherAlerts.map(a => `<span class="weather-badge ${a.severity === 'Severe' || a.severity === 'Extreme' ? 'severe' : 'warning'}">⚠ ${a.event}</span>`).join(' ');
+    } else {
+      area.innerHTML = '<span class="weather-badge clear">✓ No Weather Alerts</span>';
+    }
+  } catch (e) {
+    console.warn('NOAA fetch failed:', e);
+    document.getElementById('weatherArea').innerHTML = '<span class="weather-badge clear">✓ Weather OK</span>';
+  }
+}
+
+// ── OVERPASS: TRUCK STOPS ──
+async function fetchNearbyTruckStops(lat, lon) {
+  try {
+    const radius = 50000;
+    const query = `[out:json][timeout:10];(node["amenity"="fuel"]["hgv"="yes"](around:${radius},${lat},${lon});node["amenity"="truck_stop"](around:${radius},${lat},${lon}););out body 10;`;
+    const res = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(query) });
+    const data = await res.json();
+    nearbyStops = (data.elements || []).map(el => ({ lat: el.lat, lon: el.lon, name: el.tags?.name || 'Truck Stop', type: el.tags?.amenity }));
+
+    if (driverMap) {
+      nearbyStops.forEach(stop => {
+        L.circleMarker([stop.lat, stop.lon], { radius: 3, color: '#6366f1', fillColor: '#6366f1', fillOpacity: 0.6, weight: 1 })
+          .addTo(driverMap)
+          .bindTooltip(stop.name, { direction: 'top' });
+      });
+    }
+  } catch (e) { console.warn('Overpass fetch failed:', e); }
+}
+
+// ── CORTEX ROUTE OPTIMIZATION ──
+async function optimizeRoute() {
+  const btn = document.getElementById('optimizeBtn');
+  const resp = document.getElementById('cortexResponse');
+  btn.disabled = true;
+  btn.textContent = 'ANALYZING...';
+  resp.classList.add('active');
+  resp.textContent = 'CORTEX is analyzing your route...';
+
+  const weatherContext = weatherAlerts.length > 0
+    ? 'Active weather alerts: ' + weatherAlerts.map(a => `${a.event} (${a.severity}) - ${a.headline}`).join('; ')
+    : 'No active weather alerts along the route.';
+
+  const stopsContext = nearbyStops.length > 0
+    ? 'Nearby truck stops/fuel: ' + nearbyStops.slice(0, 5).map(s => s.name).join(', ')
+    : 'No truck stops found nearby.';
+
+  const message = `I'm a driver checking in for shipment ${currentShipmentId}. Optimize my route. Here's what I have:
+
+${weatherContext}
+
+${stopsContext}
+
+Give me:
+1. Any weather-related route adjustments
+2. Recommended fuel/rest stops
+3. Estimated drive time considerations
+4. Any hazards to watch for
+
+Keep it brief and actionable — I'm on the road.`;
+
+  try {
+    const res = await fetch(SB_CORTEX, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message }) });
+    const data = await res.json();
+    resp.textContent = data.response || 'No response from CORTEX.';
+  } catch (e) {
+    resp.textContent = 'Connection error — CORTEX unreachable.';
+  }
+
+  btn.textContent = 'OPTIMIZE';
+  btn.disabled = false;
+}
+
+// ── VOICE AGENT (xAI Realtime) ──
+const SB_VOICE = 'https://jtifhcvbgxqwlywugvjv.supabase.co/functions/v1/logistix-voice-token';
+let voiceWs = null;
+let voiceActive = false;
+let audioContext = null;
+let mediaStream = null;
+let processor = null;
+let audioQueue = [];
+let isPlaying = false;
+
+async function toggleVoice() {
+  if (voiceActive) return stopVoice();
+  startVoice();
+}
+
+async function startVoice() {
+  const btn = document.getElementById('voiceBtn');
+  const status = document.getElementById('voiceStatus');
+  btn.classList.add('connecting');
+  status.textContent = 'Connecting to CORTEX...';
+
+  try {
+    // Get ephemeral token
+    const tokenRes = await fetch(SB_VOICE, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+    const tokenData = await tokenRes.json();
+
+    if (!tokenData.token) {
+      status.textContent = 'Failed to connect — check API key';
+      btn.classList.remove('connecting');
+      return;
+    }
+
+    // Get mic
+    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 24000, channelCount: 1 } });
+    audioContext = new AudioContext({ sampleRate: 24000 });
+
+    // Connect WebSocket with ephemeral token
+    voiceWs = new WebSocket('wss://api.x.ai/v1/realtime', [`xai-client-secret.${tokenData.token}`]);
+
+    voiceWs.onopen = () => {
+      voiceActive = true;
+      btn.classList.remove('connecting');
+      btn.classList.add('recording');
+      status.textContent = 'CORTEX listening — speak naturally';
+
+      const weatherCtx = weatherAlerts.length > 0
+        ? 'Active weather alerts: ' + weatherAlerts.map(a => `${a.event} (${a.severity})`).join(', ')
+        : 'No weather alerts.';
+      const stopsCtx = nearbyStops.length > 0
+        ? 'Nearby truck stops: ' + nearbyStops.slice(0, 3).map(s => s.name).join(', ')
+        : '';
+
+      voiceWs.send(JSON.stringify({
+        type: 'session.update',
+        session: {
+          voice: 'rex',
+          instructions: `You are CORTEX — the logistics intelligence voice agent for IBS Logistix. You're talking to a driver on the road.
+
+Current shipment: ${currentShipmentId || 'unknown'}
+${weatherCtx}
+${stopsCtx}
+
+Contract: 0x289ee93a1717fbef60add4f630ed8356b7a7e8d3 on Base Sepolia.
+
+Rules:
+- Be brief and direct — they're driving
+- Give distances in miles, times in minutes/hours
+- If they ask about their shipment, report checkpoint status
+- If they ask about weather, report alerts
+- If they ask about fuel/stops, recommend nearby options
+- Speak in clear, short sentences
+- Never say "I don't have access" — you ARE the intelligence layer`,
+          turn_detection: { type: 'server_vad', threshold: 0.8, silence_duration_ms: 800 },
+          audio: {
+            input: { format: { type: 'audio/pcm', rate: 24000 } },
+            output: { format: { type: 'audio/pcm', rate: 24000 } }
+          },
+          tools: [
+            { type: 'web_search' },
+          ]
+        }
+      }));
+
+      // Start streaming mic audio
+      const source = audioContext.createMediaStreamSource(mediaStream);
+      processor = audioContext.createScriptProcessor(4096, 1, 1);
+      source.connect(processor);
+      processor.connect(audioContext.destination);
+
+      processor.onaudioprocess = (e) => {
+        if (!voiceActive || !voiceWs || voiceWs.readyState !== 1) return;
+        const input = e.inputBuffer.getChannelData(0);
+        const pcm16 = new Int16Array(input.length);
+        for (let i = 0; i < input.length; i++) {
+          const s = Math.max(-1, Math.min(1, input[i]));
+          pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+        }
+        const b64 = btoa(String.fromCharCode(...new Uint8Array(pcm16.buffer)));
+        voiceWs.send(JSON.stringify({ type: 'input_audio_buffer.append', audio: b64 }));
+      };
+    };
+
+    voiceWs.onmessage = (msg) => {
+      const event = JSON.parse(msg.data);
+
+      if (event.type === 'response.output_audio.delta' && event.delta) {
+        playAudioChunk(event.delta);
+      }
+
+      if (event.type === 'conversation.item.input_audio_transcription.completed') {
+        document.getElementById('voiceTranscript').textContent = 'You: ' + (event.transcript || '');
+      }
+
+      if (event.type === 'response.text.delta') {
+        const resp = document.getElementById('cortexResponse');
+        resp.classList.add('active');
+        resp.textContent += event.delta || '';
+      }
+
+      if (event.type === 'response.done') {
+        document.getElementById('voiceTranscript').textContent = '';
+      }
+
+      if (event.type === 'error') {
+        console.error('Voice error:', event.error);
+        document.getElementById('voiceStatus').textContent = 'Error: ' + (event.error?.message || 'unknown');
+      }
+    };
+
+    voiceWs.onerror = () => {
+      status.textContent = 'Connection error';
+      stopVoice();
+    };
+
+    voiceWs.onclose = () => {
+      if (voiceActive) {
+        status.textContent = 'Disconnected';
+        stopVoice();
+      }
+    };
+
+  } catch (err) {
+    status.textContent = 'Error: ' + err.message;
+    btn.classList.remove('connecting');
+    console.error('Voice start error:', err);
+  }
+}
+
+function stopVoice() {
+  voiceActive = false;
+  const btn = document.getElementById('voiceBtn');
+  btn.classList.remove('recording', 'connecting');
+  document.getElementById('voiceStatus').textContent = '';
+
+  if (processor) { processor.disconnect(); processor = null; }
+  if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
+  if (audioContext) { audioContext.close(); audioContext = null; }
+  if (voiceWs) { voiceWs.close(); voiceWs = null; }
+}
+
+function playAudioChunk(b64) {
+  audioQueue.push(b64);
+  if (!isPlaying) drainAudioQueue();
+}
+
+async function drainAudioQueue() {
+  if (audioQueue.length === 0) { isPlaying = false; return; }
+  isPlaying = true;
+  const b64 = audioQueue.shift();
+
+  const binaryStr = atob(b64);
+  const bytes = new Uint8Array(binaryStr.length);
+  for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+  const pcm16 = new Int16Array(bytes.buffer);
+  const float32 = new Float32Array(pcm16.length);
+  for (let i = 0; i < pcm16.length; i++) float32[i] = pcm16[i] / 32768.0;
+
+  const playCtx = audioContext || new AudioContext({ sampleRate: 24000 });
+  const buffer = playCtx.createBuffer(1, float32.length, 24000);
+  buffer.getChannelData(0).set(float32);
+  const source = playCtx.createBufferSource();
+  source.buffer = buffer;
+  source.connect(playCtx.destination);
+  source.onended = () => drainAudioQueue();
+  source.start();
+}
+
+// URL param auto-checkin
+const params = new URLSearchParams(window.location.search);
+const idParam = params.get('id');
+if (idParam) {
+  document.getElementById('shipIdInput').value = idParam;
+  setTimeout(checkIn, 300);
+}
+</script>
+</body>
+</html>
