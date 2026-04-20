@@ -11,10 +11,11 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Inter', system-ui, sans-serif; background: #050510; color: #fff; height: 100vh; overflow: hidden; -webkit-font-smoothing: antialiased; }
 
-.shell { display: grid; grid-template-columns: 1fr; grid-template-rows: 44px 1fr 64px; height: calc(100vh - 44px); }
+.shell { display: grid; grid-template-columns: 1fr 320px; grid-template-rows: 44px 1fr 64px; height: calc(100vh - 44px); }
+@media (max-width: 900px) { .shell { grid-template-columns: 1fr; } .ops-right-panel { display: none; } }
 
 /* ── HEADER ── */
-.ops-header { grid-row: 1; display: flex; align-items: center; justify-content: space-between; padding: 0 1.25rem; background: rgba(8,8,20,0.98); border-bottom: 1px solid rgba(255,255,255,0.06); }
+.ops-header { grid-column: 1/-1; grid-row: 1; display: flex; align-items: center; justify-content: space-between; padding: 0 1.25rem; background: rgba(8,8,20,0.98); border-bottom: 1px solid rgba(255,255,255,0.06); }
 .ops-brand { display: flex; align-items: center; gap: 0.5rem; }
 .ops-brand-icon { width: 1.4rem; height: 1.4rem; border-radius: 3px; }
 .ops-brand-text { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.05em; }
@@ -35,12 +36,12 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #050510; color: 
 .ops-link:hover { color: #fff; }
 
 /* ── MAP ── */
-.ops-map { grid-row: 2; position: relative; overflow: hidden; }
+.ops-map { grid-column: 1; grid-row: 2; position: relative; overflow: hidden; }
 #opsMap { width: 100%; height: 100%; background: #050510; }
 .leaflet-container { background: #050510; }
 
 /* ── SIDEBAR ── */
-.ops-sidebar { position: absolute; top: 0; right: 0; width: 380px; height: 100%; background: rgba(8,8,20,0.97); border-left: 1px solid rgba(255,255,255,0.06); z-index: 500; transform: translateX(100%); transition: transform 0.3s; overflow-y: auto; padding: 0; backdrop-filter: blur(12px); }
+.ops-sidebar { position: absolute; top: 0; right: 0; width: 380px; height: 100%; background: rgba(8,8,20,0.97); border-left: 1px solid rgba(255,255,255,0.06); z-index: 10000; transform: translateX(100%); transition: transform 0.3s; overflow-y: auto; padding: 0; backdrop-filter: blur(12px); }
 .ops-sidebar.open { transform: translateX(0); }
 .ops-sidebar-close { position: absolute; top: 0.6rem; right: 0.6rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; color: rgba(255,255,255,0.5); font-size: 0.8rem; cursor: pointer; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
 .ops-sidebar-close:hover { color: #fff; background: rgba(255,255,255,0.1); }
@@ -86,7 +87,7 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #050510; color: 
 .cp-popup-carrier { color: rgba(255,255,255,0.35) !important; }
 
 /* ── FEED ── */
-.ops-feed { grid-row: 3; display: flex; align-items: center; gap: 0.6rem; padding: 0 1rem; background: rgba(8,8,20,0.98); border-top: 1px solid rgba(255,255,255,0.06); overflow-x: auto; }
+.ops-feed { grid-column: 1/-1; grid-row: 3; display: flex; align-items: center; gap: 0.6rem; padding: 0 1rem; background: rgba(8,8,20,0.98); border-top: 1px solid rgba(255,255,255,0.06); overflow-x: auto; }
 .ops-feed-label { font-family: 'Courier New', monospace; font-size: 0.45rem; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(255,255,255,0.15); white-space: nowrap; flex-shrink: 0; }
 .ops-feed-card { flex-shrink: 0; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 4px; padding: 0.35rem 0.6rem; min-width: 160px; }
 .ops-feed-card.new { border-color: rgba(245,158,11,0.4); animation: feedFlash 1s; }
@@ -95,6 +96,24 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #050510; color: 
 .ops-feed-route { font-size: 0.5rem; color: rgba(255,255,255,0.5); }
 .ops-feed-tx { font-family: 'Courier New', monospace; font-size: 0.45rem; }
 .ops-feed-tx a { color: rgba(255,255,255,0.35); text-decoration: none; }
+
+/* ── RIGHT PANEL ── */
+.ops-right-panel { grid-column: 2; grid-row: 2; display: flex; flex-direction: column; border-left: 1px solid rgba(255,255,255,0.06); background: rgba(8,8,20,0.98); overflow: hidden; }
+.orp-header { padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+.orp-title { font-size: 0.5rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: rgba(255,255,255,0.4); }
+.orp-count { font-size: 0.45rem; color: rgba(255,255,255,0.25); background: rgba(255,255,255,0.04); padding: 0.1rem 0.35rem; border-radius: 9999px; }
+.orp-list { flex: 1; overflow-y: auto; }
+.orp-empty { padding: 1.5rem 0.75rem; text-align: center; font-size: 0.55rem; color: rgba(255,255,255,0.15); }
+.orp-item { padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.03); cursor: pointer; transition: background 0.15s; }
+.orp-item:hover { background: rgba(255,255,255,0.03); }
+.orp-item-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.15rem; }
+.orp-item-carrier { font-size: 0.6rem; font-weight: 600; }
+.orp-item-badge { font-size: 0.38rem; font-weight: 700; padding: 0.08rem 0.3rem; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.06em; }
+.orp-item-code { font-size: 0.5rem; font-family: monospace; color: rgba(255,255,255,0.4); }
+.orp-item-detail { font-size: 0.45rem; color: rgba(255,255,255,0.25); margin-top: 0.1rem; }
+.orp-item-chain { font-size: 0.4rem; font-family: monospace; margin-top: 0.1rem; }
+.orp-item-chain a { color: #60a5fa; text-decoration: none; }
+.orp-section { font-size: 0.4rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; color: rgba(255,255,255,0.2); padding: 0.5rem 0.75rem 0.25rem; }
 
 /* ── CONTROLS ── */
 .ops-controls { position: absolute; bottom: 16px; left: 1rem; z-index: 500; display: flex; flex-direction: column; gap: 0.4rem; }
@@ -158,6 +177,17 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #050510; color: 
       </div>
       <button id="commitBtn" onclick="commitFlight()" style="width:100%;padding:0.4rem;background:#22d3ee;color:#000;border:none;border-radius:4px;font-size:0.5rem;font-weight:700;letter-spacing:0.1em;cursor:pointer;">Commit to Track</button>
       <div style="font-size:0.38rem;color:rgba(255,255,255,0.2);margin-top:0.3rem;text-align:center;">3 geofence checkpoints auto-anchor on-chain: Departure · Midpoint · Arrival</div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL: Tracked Shipments + Live Flights -->
+  <div class="ops-right-panel">
+    <div class="orp-header">
+      <div class="orp-title">Active Tracking</div>
+      <div class="orp-count" id="orpCount">0</div>
+    </div>
+    <div class="orp-list" id="orpList">
+      <div class="orp-empty">No active shipments.<br>Track a carrier package above or commit a live flight.</div>
     </div>
   </div>
 
@@ -467,7 +497,58 @@ async function loadTrackedShipments() {
         trackedShipments.push({ ...t, marker, geo });
       }
     }
+    renderRightPanel();
   } catch (e) { console.warn('Load tracked failed:', e); }
+}
+
+// ── RIGHT PANEL RENDER ──
+function renderRightPanel() {
+  const list = document.getElementById('orpList');
+  const count = document.getElementById('orpCount');
+  if (!list) return;
+
+  const liveFlights = (typeof activeFlights !== 'undefined') ? activeFlights : [];
+  const allItems = [];
+
+  liveFlights.forEach(f => {
+    const statusColor = f.status === 'completed' ? '#34d399' : f.onGround === false ? '#60a5fa' : '#f59e0b';
+    const statusLabel = f.status === 'completed' ? 'Arrived' : f.onGround === false ? 'Airborne' : 'On Ground';
+    allItems.push(`<div class="orp-item" onclick="${typeof openFlightSidebar !== 'undefined' ? `openFlightSidebar(activeFlights.find(x=>x.id==='${f.id}'))` : ''}">
+      <div class="orp-item-top"><span class="orp-item-carrier">${f.flightId}</span><span class="orp-item-badge" style="color:${statusColor};background:${statusColor}18">${statusLabel}</span></div>
+      <div class="orp-item-code">${f.origin.name} → ${f.dest.name}</div>
+      <div class="orp-item-detail">Live Air · ${f.currentAlt ? Math.round(f.currentAlt * 3.28084).toLocaleString() + ' ft' : 'N/A'}</div>
+      ${f.checkpointsFired?.created?.txHash ? `<div class="orp-item-chain"><a href="https://sepolia.basescan.org/tx/${f.checkpointsFired.created.txHash}" target="_blank">On-chain ✓</a></div>` : ''}
+    </div>`);
+  });
+
+  trackedShipments.forEach(t => {
+    const color = t.status === 'delivered' ? '#34d399' : t.status === 'failure' ? '#f87171' : '#f59e0b';
+    const label = (t.status || 'unknown').replace(/_/g, ' ');
+    const cps = t.checkpoints || [];
+    const lastCp = cps[cps.length - 1];
+    const lastMsg = lastCp?.message || '';
+    allItems.push(`<div class="orp-item" onclick="openSidebar({id:'${t.shipment_id}',origin:{name:'${(cps[0]?.tracking_location?.city||'Origin').replace(/'/g,'')}'},dest:{name:'${(lastCp?.tracking_location?.city||'Dest').replace(/'/g,'')}'},cargo:'${t.cargo_type||'Package'}',mode:'carrier',carrier:'${(t.carrier||'').replace(/'/g,'')}',progress:${t.status==='delivered'?1:0.5},delivered:${t.status==='delivered'},checkpoints:${JSON.stringify(t.last_anchor_tx?[{label:t.last_anchor_event||t.status,type:2,txHash:t.last_anchor_tx,timestamp:Date.now()/1000}]:[])}})">
+      <div class="orp-item-top"><span class="orp-item-carrier">${t.carrier || 'Unknown'}</span><span class="orp-item-badge" style="color:${color};background:${color}18">${label}</span></div>
+      <div class="orp-item-code">${t.tracking_code}</div>
+      <div class="orp-item-detail">${lastMsg.slice(0, 40)}</div>
+      ${t.last_anchor_tx ? `<div class="orp-item-chain"><a href="https://sepolia.basescan.org/tx/${t.last_anchor_tx}" target="_blank">On-chain ✓</a></div>` : ''}
+    </div>`);
+  });
+
+  count.textContent = allItems.length;
+
+  if (allItems.length === 0) {
+    list.innerHTML = '<div class="orp-empty">No active shipments.<br>Track a carrier package above or commit a live flight.</div>';
+  } else {
+    let html = '';
+    if (liveFlights.length > 0) html += '<div class="orp-section">Live Flights</div>';
+    liveFlights.forEach((_, i) => html += allItems[i]);
+    if (trackedShipments.length > 0) html += '<div class="orp-section">Carrier Tracking</div>';
+    for (let i = liveFlights.length; i < allItems.length; i++) html += allItems[i];
+    list.innerHTML = html;
+  }
+
+  updateStats();
 }
 
 // ── INIT (real data only — no simulated shipments) ──
@@ -490,7 +571,7 @@ async function loadTrackedShipments() {
       destSel.innerHTML = '<option value="">Select destination...</option>' +
         Object.entries(AIRPORTS).map(([code, a]) => `<option value="${code}">${a.name}</option>`).join('');
     }
-    updateStats();
+    renderRightPanel();
   };
   document.body.appendChild(ftScript);
 })();
