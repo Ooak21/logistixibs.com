@@ -364,12 +364,13 @@ async function loadCargoFlights() {
   if (!layers.flights) return;
   clearFlightMarkers();
   try {
-    const res = await fetch(`${LAS_PROXY}?action=scan&dep_iata=LAS`);
+    const res = await fetch(`${LAS_PROXY}?action=live&dep_iata=LAS`);
     if (!res.ok) return;
     const d = await res.json();
-    if (!d.departures || d.departures.length === 0) return;
+    const flightList = d.flights || d.departures || [];
+    if (flightList.length === 0) return;
 
-    d.departures.forEach(f => {
+    flightList.forEach(f => {
       if (!f.lat || !f.lon || !f.flight_iata) return;
       const rot = f.heading ? `transform:rotate(${f.heading}deg)` : '';
       const altKft = f.alt ? Math.round(f.alt * 3.28084 / 1000) : 0;

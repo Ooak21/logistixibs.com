@@ -291,7 +291,7 @@ function updateLiveFlightStats() {
   if (badge) badge.textContent = activeFlights.filter(f => f.status !== 'completed').length;
 }
 
-// ── SCAN LAS DEPARTURES ──
+// ── SCAN LAS UPCOMING DEPARTURES ──
 async function loadCandidateFlights() {
   const tracked = new Set();
   try {
@@ -304,7 +304,7 @@ async function loadCandidateFlights() {
     const res = await fetch(`${PROXY_URL}?action=scan&dep_iata=LAS`);
     if (!res.ok) return [];
     const d = await res.json();
-    return (d.departures || []).filter(f => f.flight_iata && f.lat && !tracked.has(f.flight_iata));
+    return (d.upcoming || []).filter(f => f.flight_iata && !tracked.has(f.flight_iata));
   } catch (e) { console.warn('scan error:', e); return []; }
 }
 
@@ -322,18 +322,21 @@ async function commitFlight() {
 
   btn.disabled = true; btn.textContent = 'Committing...';
 
-  const routePts = gcArc(candidate.lat, candidate.lon, dest.lat, dest.lon, 80);
-  const totalDist = haversineDist(candidate.lat, candidate.lon, dest.lat, dest.lon);
+  const LAS_LAT = 36.08, LAS_LON = -115.15;
+  const originLat = candidate.lat || LAS_LAT;
+  const originLon = candidate.lon || LAS_LON;
+  const routePts = gcArc(originLat, originLon, dest.lat, dest.lon, 80);
+  const totalDist = haversineDist(originLat, originLon, dest.lat, dest.lon);
 
   try {
     const res = await fetch(COMMIT_URL, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         icao24: candidate.flight_iata, callsign: candidate.flight_iata,
-        originLat: candidate.lat, originLon: candidate.lon, originName: `Las Vegas (LAS)`,
+        originLat, originLon, originName: 'Las Vegas (LAS)',
         destLat: dest.lat, destLon: dest.lon, destName: dest.name,
         routePts, totalDistanceKm: totalDist,
-        metadata: { airline: candidate.airline_iata, arr_iata: candidate.arr_iata },
+        metadata: { airline: candidate.airline_iata, arr_iata: candidate.arr_iata, dep_time: candidate.dep_time, arr_time: candidate.arr_time },
       }),
     });
     const data = await res.json();
@@ -342,11 +345,11 @@ async function commitFlight() {
     const flight = {
       id: data.id, flightId: data.flightId, flightIata: candidate.flight_iata,
       icao24: candidate.flight_iata, shipmentId: data.shipmentId, status: 'committed',
-      origin: { lat: candidate.lat, lon: candidate.lon, name: 'Las Vegas (LAS)' },
+      origin: { lat: originLat, lon: originLon, name: 'Las Vegas (LAS)' },
       dest: { lat: dest.lat, lon: dest.lon, name: dest.name },
-      currentLat: candidate.lat, currentLon: candidate.lon,
-      currentAlt: candidate.alt, currentHeading: candidate.heading,
-      currentSpeed: candidate.speed, onGround: false,
+      currentLat: originLat, currentLon: originLon,
+      currentAlt: 0, currentHeading: 0,
+      currentSpeed: 0, onGround: true,
       checkpointsFired: data.createdTx ? { created: data.createdTx } : {},
       routePts, totalDistanceKm: totalDist, metadata: { airline: candidate.airline_iata },
       lastPollAt: 0, marker: null, label: null, routeLine: null,
@@ -374,16 +377,18 @@ async function scanFlights() {
   const candidates = await loadCandidateFlights();
   scanBtn.disabled = false;
 
-  if (candidates.length === 0) { select.innerHTML = '<option value="">No departures found — try again in a moment</option>'; return; }
+  if (candidates.length === 0) { select.innerHTML = '<option value="">No upcoming departures — try again shortly</option>'; return; }
 
-  select.innerHTML = '<option value="">Select a flight from LAS...</option>' +
+  select.innerHTML = '<option value="">Select an upcoming LAS departure...</option>' +
     candidates.map(c => {
-      const altKft = c.alt ? Math.round(c.alt * 3.28084 / 1000) : 0;
-      const destHint = c.arr_iata ? ` → ${c.arr_iata}` : '';
-      return `<option value='${JSON.stringify(c).replace(/'/g, "&#39;")}'>${c.flight_iata}${destHint} · ${altKft}kft · ${c.airline_iata || ''}</option>`;
+      const mins = c.minutes_until;
+      const when = mins <= 0 ? 'NOW' : mins < 60 ? `${mins}min` : `${Math.floor(mins/60)}h${mins%60}m`;
+      const depLocal = c.dep_time ? c.dep_time.split(' ')[1] : '';
+      const gate = c.dep_gate ? ` G${c.dep_gate}` : '';
+      const term = c.dep_terminal ? ` T${c.dep_terminal}` : '';
+      return `<option value='${JSON.stringify(c).replace(/'/g, "&#39;")}'>${c.flight_iata} → ${c.arr_iata} · ${depLocal} (${when})${term}${gate} · ${c.airline_iata || ''}</option>`;
     }).join('');
 
-  // Auto-select destination if first candidate has arr_iata
   select.onchange = () => {
     try {
       const sel = JSON.parse(select.value);
