@@ -68,9 +68,9 @@ function rowToFlight(row) {
   return {
     id: row.id, flightId: row.flight_id, flightIata: row.flight_id,
     icao24: row.icao24, shipmentId: row.shipment_id, status: row.status,
-    origin: { lat: row.origin_lat, lon: row.origin_lon, name: row.origin_name || 'Origin' },
+    origin: { lat: row.origin_lat || 36.08, lon: row.origin_lon || -115.15, name: row.origin_name || 'Las Vegas (LAS)' },
     dest: { lat: row.dest_lat, lon: row.dest_lon, name: row.dest_name || 'Destination' },
-    currentLat: row.current_lat, currentLon: row.current_lon,
+    currentLat: row.current_lat || row.origin_lat || 36.08, currentLon: row.current_lon || row.origin_lon || -115.15,
     currentAlt: row.current_alt_m, currentHeading: row.current_heading,
     currentSpeed: row.current_speed, onGround: row.on_ground,
     checkpointsFired: row.checkpoints_fired || {},
@@ -83,8 +83,13 @@ function rowToFlight(row) {
 // ── RENDER FLIGHT ON MAP ──
 function renderFlightOnMap(flight) {
   const color = '#22d3ee';
-  const lat = flight.currentLat || flight.origin.lat;
-  const lon = flight.currentLon || flight.origin.lon;
+  const LAS_LAT = 36.08, LAS_LON = -115.15;
+  const lat = flight.currentLat || flight.origin.lat || LAS_LAT;
+  const lon = flight.currentLon || flight.origin.lon || LAS_LON;
+  if (!flight.origin.lat) flight.origin.lat = LAS_LAT;
+  if (!flight.origin.lon) flight.origin.lon = LAS_LON;
+  if (!flight.currentLat) flight.currentLat = lat;
+  if (!flight.currentLon) flight.currentLon = lon;
 
   if (flight.routePts && flight.routePts.length > 1) {
     flight.routeLine = L.polyline(flight.routePts, { color: 'rgba(34,211,238,0.3)', weight: 2, dashArray: '10 8' }).addTo(map);
@@ -93,8 +98,10 @@ function renderFlightOnMap(flight) {
   L.circleMarker([flight.origin.lat, flight.origin.lon], { radius: 5, color: '#f59e0b', fillColor: '#f59e0b', fillOpacity: 0.7, weight: 1 })
     .addTo(map).bindPopup(`<div class="cp-popup"><div class="cp-popup-type" style="color:#f59e0b">ORIGIN</div><div class="cp-popup-desc">${flight.origin.name}</div></div>`);
 
-  L.circleMarker([flight.dest.lat, flight.dest.lon], { radius: 5, color: '#34d399', fillColor: '#34d399', fillOpacity: 0.7, weight: 1 })
-    .addTo(map).bindPopup(`<div class="cp-popup"><div class="cp-popup-type" style="color:#34d399">DESTINATION</div><div class="cp-popup-desc">${flight.dest.name}</div></div>`);
+  if (flight.dest.lat && flight.dest.lon) {
+    L.circleMarker([flight.dest.lat, flight.dest.lon], { radius: 5, color: '#34d399', fillColor: '#34d399', fillOpacity: 0.7, weight: 1 })
+      .addTo(map).bindPopup(`<div class="cp-popup"><div class="cp-popup-type" style="color:#34d399">DESTINATION</div><div class="cp-popup-desc">${flight.dest.name}</div></div>`);
+  }
 
   if (flight.routePts && flight.routePts.length > 1) {
     const midIdx = Math.floor(flight.routePts.length / 2);
