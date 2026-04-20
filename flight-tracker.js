@@ -203,9 +203,7 @@ async function pollFlight(flight) {
   if (!token) return;
 
   try {
-    const res = await fetch(`https://opensky-network.org/api/states/all?icao24=${flight.icao24}`, {
-      headers: { 'Authorization': `Bearer ${token}` },
-    });
+    const res = await fetch(`${SB_URL}/functions/v1/logistix-opensky?action=track&icao24=${flight.icao24}`);
     if (!res.ok) return;
     const d = await res.json();
     const sv = d.states?.[0];
@@ -342,11 +340,8 @@ function updateLiveFlightStats() {
   if (badge) badge.textContent = liveCount;
 }
 
-// ── CANDIDATE DISCOVERY ──
+// ── CANDIDATE DISCOVERY (KLAS departures within last 5 min) ──
 async function loadCandidateFlights() {
-  const token = await getOSToken();
-  if (!token) return [];
-
   const tracked = new Set();
   try {
     const tRes = await fetch(`${FLIGHT_REST}?select=icao24&status=neq.completed`, {
@@ -357,30 +352,21 @@ async function loadCandidateFlights() {
   } catch {}
 
   try {
-    const res = await fetch('https://opensky-network.org/api/states/all', {
-      headers: { 'Authorization': `Bearer ${token}` },
-    });
+    const res = await fetch(`${SB_URL}/functions/v1/logistix-opensky?action=scan&airport=KLAS`);
     if (!res.ok) return [];
     const d = await res.json();
-    if (!d.states) return [];
+    if (!d.departures) return [];
 
-    return d.states.filter(s => {
-      const cs = (s[1] || '').trim().toUpperCase();
-      return CARGO_PREFIXES.some(p => cs.startsWith(p))
-        && s[6] && s[5]
-        && s[8] === false
-        && s[7] > 500
-        && s[9] > 50
-        && !tracked.has(s[0]);
-    }).slice(0, 30).map(s => ({
-      icao24: s[0],
-      callsign: (s[1] || '').trim(),
-      lat: s[6],
-      lon: s[5],
-      alt: s[7],
-      heading: s[10],
-      speed: s[9],
-      country: s[2],
+    return d.departures.filter(f => !tracked.has(f.icao24) && f.callsign).map(f => ({
+      icao24: f.icao24,
+      callsign: f.callsign,
+      lat: f.lat,
+      lon: f.lon,
+      alt: f.alt,
+      heading: f.heading,
+      speed: f.speed,
+      country: f.country,
+      dest_airport: f.dest_airport,
     }));
   } catch (e) { console.warn('loadCandidateFlights error:', e); return []; }
 }
@@ -465,10 +451,9 @@ async function scanFlights() {
     return;
   }
 
-  select.innerHTML = '<option value="">Select a cargo flight...</option>' +
+  select.innerHTML = '<option value="">Select a flight at LAS...</option>' +
     candidates.map(c => {
-      const altKft = Math.round(c.alt * 3.28084 / 1000);
-      const spdKts = Math.round(c.speed * 1.944);
-      return `<option value='${JSON.stringify(c).replace(/'/g, "&#39;")}'>${c.callsign} · ${altKft}kft · ${spdKts}kts · ${c.country}</option>`;
+      const status = c.on_ground ? 'ON GATE' : `${c.alt ? Math.round(c.alt * 3.28084 / 1000) + 'kft' : 'climbing'}`;
+      return `<option value='${JSON.stringify(c).replace(/'/g, "&#39;")}'>${c.callsign} · ${status} · ${c.country || ''}</option>`;
     }).join('');
 }
