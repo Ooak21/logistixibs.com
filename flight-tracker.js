@@ -91,36 +91,43 @@ function renderFlightOnMap(flight) {
   if (!flight.currentLat) flight.currentLat = lat;
   if (!flight.currentLon) flight.currentLon = lon;
 
-  if (flight.routePts && flight.routePts.length > 1) {
-    flight.routeLine = L.polyline(flight.routePts, { color: 'rgba(34,211,238,0.3)', weight: 2, dashArray: '10 8' }).addTo(map);
-  }
+  try {
+    if (flight.routePts && flight.routePts.length > 1) {
+      const validPts = flight.routePts.filter(p => p && p[0] != null && p[1] != null);
+      if (validPts.length > 1) flight.routeLine = L.polyline(validPts, { color: 'rgba(34,211,238,0.3)', weight: 2, dashArray: '10 8' }).addTo(map);
+    }
 
-  // Origin airport marker + geofence
-  L.circleMarker([flight.origin.lat, flight.origin.lon], { radius: 5, color: '#f59e0b', fillColor: '#f59e0b', fillOpacity: 0.7, weight: 1 })
-    .addTo(map).bindPopup(`<div class="cp-popup"><div class="cp-popup-type" style="color:#f59e0b">ORIGIN</div><div class="cp-popup-desc">${flight.origin.name}</div></div>`);
-  L.circle([flight.origin.lat, flight.origin.lon], { radius: GEOFENCE_RADIUS_KM * 1000, color: '#f59e0b', fillColor: '#f59e0b', fillOpacity: 0.03, weight: 1.5, dashArray: '8 6', interactive: false }).addTo(map);
+    // Origin airport marker + geofence
+    L.circleMarker([flight.origin.lat, flight.origin.lon], { radius: 5, color: '#f59e0b', fillColor: '#f59e0b', fillOpacity: 0.7, weight: 1 })
+      .addTo(map).bindPopup(`<div class="cp-popup"><div class="cp-popup-type" style="color:#f59e0b">ORIGIN</div><div class="cp-popup-desc">${flight.origin.name}</div></div>`);
+    L.circle([flight.origin.lat, flight.origin.lon], { radius: GEOFENCE_RADIUS_KM * 1000, color: '#f59e0b', fillColor: '#f59e0b', fillOpacity: 0.04, weight: 1.5, dashArray: '6 4', interactive: false }).addTo(map);
 
-  // Destination airport marker + geofence
-  if (flight.dest.lat && flight.dest.lon) {
-    L.circleMarker([flight.dest.lat, flight.dest.lon], { radius: 5, color: '#34d399', fillColor: '#34d399', fillOpacity: 0.7, weight: 1 })
-      .addTo(map).bindPopup(`<div class="cp-popup"><div class="cp-popup-type" style="color:#34d399">DESTINATION</div><div class="cp-popup-desc">${flight.dest.name}</div></div>`);
-    L.circle([flight.dest.lat, flight.dest.lon], { radius: GEOFENCE_RADIUS_KM * 1000, color: '#34d399', fillColor: '#34d399', fillOpacity: 0.03, weight: 1.5, dashArray: '8 6', interactive: false }).addTo(map);
-  }
+    // Destination airport marker + geofence
+    if (flight.dest.lat && flight.dest.lon) {
+      L.circleMarker([flight.dest.lat, flight.dest.lon], { radius: 5, color: '#34d399', fillColor: '#34d399', fillOpacity: 0.7, weight: 1 })
+        .addTo(map).bindPopup(`<div class="cp-popup"><div class="cp-popup-type" style="color:#34d399">DESTINATION</div><div class="cp-popup-desc">${flight.dest.name}</div></div>`);
+      L.circle([flight.dest.lat, flight.dest.lon], { radius: GEOFENCE_RADIUS_KM * 1000, color: '#34d399', fillColor: '#34d399', fillOpacity: 0.04, weight: 1.5, dashArray: '6 4', interactive: false }).addTo(map);
+    }
 
-  if (flight.routePts && flight.routePts.length > 1) {
-    const midIdx = Math.floor(flight.routePts.length / 2);
-    const midPt = flight.routePts[midIdx];
-    L.marker(midPt, { icon: L.divIcon({ className: '', html: '<div style="width:18px;height:18px;border-radius:3px;background:rgba(167,139,250,0.15);border:1.5px solid rgba(167,139,250,0.5);color:#a78bfa;font-size:8px;font-weight:800;display:flex;align-items:center;justify-content:center;cursor:pointer;">M</div>', iconSize: [18,18], iconAnchor: [9,9] })}).addTo(map)
-      .bindPopup('<div class="cp-popup"><div class="cp-popup-type" style="color:#a78bfa">MIDPOINT GEOFENCE</div><div class="cp-popup-desc">On-chain anchor at 50% route</div></div>');
-  }
+    // Midpoint marker
+    if (flight.routePts && flight.routePts.length > 1) {
+      const validPts = flight.routePts.filter(p => p && p[0] != null && p[1] != null);
+      if (validPts.length > 1) {
+        const midPt = validPts[Math.floor(validPts.length / 2)];
+        L.marker(midPt, { icon: L.divIcon({ className: '', html: '<div style="width:18px;height:18px;border-radius:3px;background:rgba(167,139,250,0.15);border:1.5px solid rgba(167,139,250,0.5);color:#a78bfa;font-size:8px;font-weight:800;display:flex;align-items:center;justify-content:center;cursor:pointer;">M</div>', iconSize: [18,18], iconAnchor: [9,9] })}).addTo(map)
+          .bindPopup('<div class="cp-popup"><div class="cp-popup-type" style="color:#a78bfa">MIDPOINT</div><div class="cp-popup-desc">On-chain anchor at 50% route</div></div>');
+      }
+    }
 
-  const hdg = flight.currentHeading || 0;
-  flight.marker = L.marker([lat, lon], { icon: vehicleIcon('air', color, hdg), zIndexOffset: 2000 }).addTo(map);
-  flight.marker.on('click', () => openFlightSidebar(flight));
+    // Flight icon
+    const hdg = flight.currentHeading || 0;
+    flight.marker = L.marker([lat, lon], { icon: vehicleIcon('air', color, hdg), zIndexOffset: 2000 }).addTo(map);
+    flight.marker.on('click', () => openFlightSidebar(flight));
 
-  flight.label = L.marker([lat, lon], { icon: L.divIcon({ className: '', html: `<div style="font-size:10px;color:${color};font-family:Inter,sans-serif;font-weight:600;white-space:nowrap;text-shadow:0 1px 4px rgba(0,0,0,0.9);text-align:center;pointer-events:none;">${flight.flightIata}<br><span style="font-size:8px;font-weight:400;opacity:0.7">${flight.status === 'completed' ? 'ARRIVED' : 'LIVE'}</span></div>`, iconSize: [100, 28], iconAnchor: [50, -14] })}).addTo(map);
+    flight.label = L.marker([lat, lon], { icon: L.divIcon({ className: '', html: `<div style="font-size:10px;color:${color};font-family:Inter,sans-serif;font-weight:600;white-space:nowrap;text-shadow:0 1px 4px rgba(0,0,0,0.9);text-align:center;pointer-events:none;">${flight.flightIata}<br><span style="font-size:8px;font-weight:400;opacity:0.7">${flight.status === 'completed' ? 'ARRIVED' : 'LIVE'}</span></div>`, iconSize: [100, 28], iconAnchor: [50, -14] })}).addTo(map);
 
-  if (flight.status === 'completed') { flight.marker.setOpacity(0.5); flight.label.setOpacity(0.5); }
+    if (flight.status === 'completed') { flight.marker.setOpacity(0.5); flight.label.setOpacity(0.5); }
+  } catch (e) { console.warn('renderFlightOnMap error for', flight.flightIata, e); }
 }
 
 // ── FLIGHT SIDEBAR ──
@@ -244,7 +251,7 @@ async function pollFlight(flight) {
 }
 
 // ── GEOFENCE CHECKPOINT EVALUATOR ──
-const GEOFENCE_RADIUS_KM = 15;
+const GEOFENCE_RADIUS_KM = 3.2;
 
 async function evaluateCheckpoints(flight) {
   const distFromOrigin = haversineDist(flight.origin.lat, flight.origin.lon, flight.currentLat, flight.currentLon);
