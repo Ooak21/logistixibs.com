@@ -19,20 +19,21 @@
       function inject() {
         var mv = document.querySelector('model-viewer');
         if (!mv) return setTimeout(inject, 200);
-        // Hide the model-viewer and its container (the grey box) — don't remove anything
-        var box = mv.parentElement;
-        while (box) {
-          // Find the container that has the grey background / large padding — usually 2-3 levels up
-          var style = window.getComputedStyle(box);
-          var h = box.offsetHeight || 0;
-          if (h > 300 && box.parentElement && box.parentElement.tagName !== 'BODY' && box.id !== 'root') {
-            box.style.display = 'none';
+
+        // The satellite is inside a scrollytelling section: h-[300vh] parent with a sticky h-screen child
+        // containing the grey box (w-[80vw] h-[80vh] bg-[#1A1A1A])
+        // Walk up from model-viewer to find the 300vh scroll container and hide it
+        var el = mv;
+        while (el && el.id !== 'root') {
+          if (el.style.height === '300vh' || el.className.indexOf('300vh') !== -1 ||
+              (el.offsetHeight > window.innerHeight * 2)) {
+            el.style.display = 'none';
             break;
           }
-          if (box.parentElement && (box.parentElement.id === 'root' || box.parentElement.tagName === 'BODY')) break;
-          box = box.parentElement;
+          el = el.parentElement;
         }
-        // Insert FAQ section after the footer's previous sibling (before footer)
+
+        // Insert FAQ before footer
         var footer = document.querySelector('footer');
         if (!footer) return;
         var faqDiv = document.createElement('div');
