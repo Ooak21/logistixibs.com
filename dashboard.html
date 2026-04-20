@@ -1171,17 +1171,30 @@ async function startSimulation() {
     };
     sessionStorage.setItem('logistix_lead', JSON.stringify(lead));
 
-    // Store lead in Supabase
-    fetch('https://jtifhcvbgxqwlywugvjv.supabase.co/rest/v1/logistix_leads', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0aWZoY3ZiZ3hxd2x5d3Vndmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1MDc5NTgsImV4cCI6MjA4ODA4Mzk1OH0.UfRVLuvM8_HPvKXUEDXb0cxR50znv16L5Tf99AnSc7g',
-        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0aWZoY3ZiZ3hxd2x5d3Vndmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1MDc5NTgsImV4cCI6MjA4ODA4Mzk1OH0.UfRVLuvM8_HPvKXUEDXb0cxR50znv16L5Tf99AnSc7g',
-        'Prefer': 'return=minimal',
-      },
-      body: JSON.stringify(lead),
-    }).catch(function() {});
+    var SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0aWZoY3ZiZ3hxd2x5d3Vndmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1MDc5NTgsImV4cCI6MjA4ODA4Mzk1OH0.UfRVLuvM8_HPvKXUEDXb0cxR50znv16L5Tf99AnSc7g';
+    var SB_URL = 'https://jtifhcvbgxqwlywugvjv.supabase.co';
+    var headers = { 'Content-Type': 'application/json', 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON, 'Prefer': 'return=minimal' };
+
+    // Store in logistix_leads as backup
+    fetch(SB_URL + '/rest/v1/logistix_leads', { method: 'POST', headers: headers, body: JSON.stringify(lead) }).catch(function() {});
+
+    // Create IBS CRM record tagged from Logistix
+    var crmRecord = {
+      telnyx_call_control_id: 'logistix-web-' + Date.now(),
+      caller_name: lead.name,
+      caller_email: lead.email,
+      company_name: lead.company,
+      intent_classification: 'SALES',
+      classification_reasoning: 'Logistix demo inquiry — ' + (lead.description || 'no description'),
+      routed_to: 'moses',
+      intent_score: 'MEDIUM',
+      pre_transfer_summary: lead.name + ' from ' + lead.company + ' accessed the Logistix simulator demo. ' + (lead.description || ''),
+      call_status: 'completed',
+      notes: 'SOURCE: Logistix Simulator (logistixibs.com)\nCompany: ' + lead.company + '\nEmail: ' + lead.email + '\nDescription: ' + (lead.description || 'N/A'),
+      qualifying_answers: { source: 'logistix_simulator', company: lead.company, description: lead.description },
+      raw_event: { source: 'logistix_simulator', lead: lead },
+    };
+    fetch(SB_URL + '/rest/v1/ibs_calls', { method: 'POST', headers: headers, body: JSON.stringify(crmRecord) }).catch(function() {});
 
     document.getElementById('leadModal').style.display = 'none';
   });
