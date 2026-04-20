@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LOGISTIX HQ — Operations Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0a14; --surface: #10101e; --surface2: #161628;
+  --border: rgba(255,255,255,0.06); --border2: rgba(255,255,255,0.1);
+  --text: #e4e4e7; --muted: #71717a; --dim: #52525b;
+  --amber: #f59e0b; --blue: #60a5fa; --green: #34d399; --red: #f87171; --purple: #a78bfa;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+
+/* ── HEADER ── */
+.hdr { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1.5rem; background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 20; }
+.hdr-brand { display: flex; align-items: center; gap: 0.5rem; }
+.hdr-logo { width: 1.4rem; height: 1.4rem; color: var(--amber); }
+.hdr-title { font-size: 0.9rem; font-weight: 700; letter-spacing: 0.05em; }
+.hdr-badge { font-size: 0.45rem; color: var(--amber); background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2); padding: 0.12rem 0.4rem; border-radius: 9999px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+
+.hdr-center { display: flex; align-items: center; gap: 0.5rem; flex: 1; max-width: 400px; margin: 0 1.5rem; }
+.hdr-search { flex: 1; padding: 0.4rem 0.7rem; background: rgba(255,255,255,0.04); border: 1px solid var(--border2); border-radius: 6px; color: #fff; font-size: 0.7rem; outline: none; font-family: monospace; }
+.hdr-search:focus { border-color: rgba(245,158,11,0.4); }
+.hdr-search::placeholder { color: var(--dim); }
+.hdr-track-btn { padding: 0.4rem 0.7rem; background: var(--amber); color: #000; border: none; border-radius: 6px; font-size: 0.55rem; font-weight: 700; cursor: pointer; letter-spacing: 0.1em; white-space: nowrap; }
+
+.hdr-right { display: flex; align-items: center; gap: 0.6rem; }
+.hdr-link { font-size: 0.55rem; color: var(--muted); text-decoration: none; }
+.hdr-link:hover { color: var(--text); }
+
+.voice-fab { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--amber); background: rgba(245,158,11,0.08); color: var(--amber); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s; }
+.voice-fab:hover { background: var(--amber); color: #000; }
+
+/* ── BRIEFING ── */
+.briefing { margin: 1rem 1.5rem; padding: 1.25rem 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; position: relative; }
+.briefing-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; }
+.briefing-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.briefing-label { font-size: 0.6rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted); }
+.briefing-text { font-size: 0.82rem; line-height: 1.7; color: rgba(255,255,255,0.75); }
+.briefing-text strong { color: var(--text); }
+.briefing-loading { font-size: 0.7rem; color: var(--dim); }
+.briefing-stats { display: flex; gap: 1rem; margin-top: 0.75rem; flex-wrap: wrap; }
+.bstat { display: flex; align-items: center; gap: 0.3rem; }
+.bstat-val { font-size: 1.1rem; font-weight: 700; }
+.bstat-label { font-size: 0.5rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+
+/* ── ZONES ── */
+.zones { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; padding: 0 1.5rem 1rem; }
+@media (max-width: 900px) { .zones { grid-template-columns: 1fr; } }
+
+.zone { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; max-height: 400px; display: flex; flex-direction: column; }
+.zone-header { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.zone-title { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; }
+.zone-count { font-size: 0.55rem; color: var(--dim); background: rgba(255,255,255,0.04); padding: 0.15rem 0.4rem; border-radius: 9999px; }
+.zone-list { flex: 1; overflow-y: auto; }
+.zone-empty { padding: 2rem 1rem; text-align: center; font-size: 0.65rem; color: var(--dim); }
+
+.zone-item { padding: 0.65rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.03); cursor: pointer; transition: background 0.2s; }
+.zone-item:hover { background: rgba(255,255,255,0.02); }
+.zone-item-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.25rem; }
+.zone-item-carrier { font-size: 0.65rem; font-weight: 600; }
+.zone-item-badge { font-size: 0.45rem; font-weight: 700; padding: 0.1rem 0.35rem; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.08em; }
+.badge-transit { background: rgba(96,165,250,0.15); color: var(--blue); }
+.badge-delivered { background: rgba(52,211,153,0.15); color: var(--green); }
+.badge-exception { background: rgba(248,113,113,0.15); color: var(--red); }
+.badge-pending { background: rgba(245,158,11,0.15); color: var(--amber); }
+.zone-item-route { font-size: 0.6rem; color: var(--muted); }
+.zone-item-detail { font-size: 0.55rem; color: var(--dim); margin-top: 0.2rem; }
+.zone-item-action { margin-top: 0.3rem; }
+.zone-item-action button { padding: 0.2rem 0.5rem; background: rgba(255,255,255,0.04); border: 1px solid var(--border2); border-radius: 4px; color: var(--muted); font-size: 0.5rem; cursor: pointer; margin-right: 0.3rem; }
+.zone-item-action button:hover { color: var(--text); border-color: var(--amber); }
+
+/* ── ALL SHIPMENTS TABLE ── */
+.all-section { padding: 0 1.5rem 1.5rem; }
+.all-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+.all-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
+.all-filters { display: flex; gap: 0.3rem; }
+.filter-btn { padding: 0.25rem 0.5rem; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 4px; color: var(--dim); font-size: 0.5rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.filter-btn:hover { color: var(--text); }
+.filter-btn.active { color: var(--amber); border-color: rgba(245,158,11,0.3); background: rgba(245,158,11,0.06); }
+
+.ship-table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.ship-table th { padding: 0.5rem 0.75rem; font-size: 0.5rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: var(--dim); text-align: left; border-bottom: 1px solid var(--border); background: var(--surface2); }
+.ship-table td { padding: 0.5rem 0.75rem; font-size: 0.65rem; border-bottom: 1px solid rgba(255,255,255,0.02); }
+.ship-table tr:hover { background: rgba(255,255,255,0.02); }
+.ship-table .mono { font-family: monospace; font-size: 0.6rem; color: var(--muted); }
+.ship-table .chain-link { font-family: monospace; font-size: 0.5rem; color: var(--blue); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="hdr-brand">
+    <svg class="hdr-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+    <div class="hdr-title">LOGISTIX HQ</div>
+    <div class="hdr-badge">Operations</div>
+  </div>
+  <div class="hdr-center">
+    <input class="hdr-search" id="globalSearch" placeholder="Search tracking #, carrier, client..." onkeydown="if(event.key==='Enter'){if(this.value.length>8)addTrack(this.value);else filterAll()}">
+    <button class="hdr-track-btn" onclick="addTrack(document.getElementById('globalSearch').value)">+ TRACK</button>
+  </div>
+  <div class="hdr-right">
+    <a href="./ops.html" class="hdr-link">Ops Center</a>
+    <a href="./dashboard.html" class="hdr-link">Simulator</a>
+    <button class="voice-fab" onclick="toggleVoice()" id="voiceBtn" title="Talk to Rex">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- BRIEFING -->
+<div class="briefing" id="briefing">
+  <div class="briefing-header">
+    <div class="briefing-dot"></div>
+    <div class="briefing-label">CORTEX Morning Briefing</div>
+  </div>
+  <div class="briefing-text" id="briefingText">
+    <span class="briefing-loading">Loading briefing...</span>
+  </div>
+  <div class="briefing-stats" id="briefingStats"></div>
+</div>
+
+<!-- ZONES -->
+<div class="zones">
+  <div class="zone">
+    <div class="zone-header">
+      <div class="zone-title" style="color:var(--blue);">Inbound Today</div>
+      <div class="zone-count" id="inboundCount">0</div>
+    </div>
+    <div class="zone-list" id="inboundList"><div class="zone-empty">No inbound shipments</div></div>
+  </div>
+  <div class="zone">
+    <div class="zone-header">
+      <div class="zone-title" style="color:var(--amber);">Outbound Today</div>
+      <div class="zone-count" id="outboundCount">0</div>
+    </div>
+    <div class="zone-list" id="outboundList"><div class="zone-empty">No outbound shipments</div></div>
+  </div>
+  <div class="zone">
+    <div class="zone-header">
+      <div class="zone-title" style="color:var(--red);">Exceptions</div>
+      <div class="zone-count" id="exceptionCount">0</div>
+    </div>
+    <div class="zone-list" id="exceptionList"><div class="zone-empty">No exceptions — all clear</div></div>
+  </div>
+</div>
+
+<!-- ALL SHIPMENTS -->
+<div class="all-section">
+  <div class="all-header">
+    <div class="all-title">All Shipments</div>
+    <div class="all-filters">
+      <button class="filter-btn active" onclick="setFilter('all',this)">All</button>
+      <button class="filter-btn" onclick="setFilter('in_transit',this)">In Transit</button>
+      <button class="filter-btn" onclick="setFilter('delivered',this)">Delivered</button>
+      <button class="filter-btn" onclick="setFilter('failure',this)">Exceptions</button>
+      <button class="filter-btn" onclick="setFilter('pre_transit',this)">Pending</button>
+    </div>
+  </div>
+  <table class="ship-table">
+    <thead>
+      <tr>
+        <th>Tracking #</th>
+        <th>Carrier</th>
+        <th>Status</th>
+        <th>Last Update</th>
+        <th>ETA</th>
+        <th>On-Chain</th>
+      </tr>
+    </thead>
+    <tbody id="shipTableBody">
+      <tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--dim);font-size:0.65rem;">Loading shipments...</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+const SB_URL = 'https://jtifhcvbgxqwlywugvjv.supabase.co';
+const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0aWZoY3ZiZ3hxd2x5d3Vndmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1MDc5NTgsImV4cCI6MjA4ODA4Mzk1OH0.UfRVLuvM8_HPvKXUEDXb0cxR50znv16L5Tf99AnSc7g';
+const SB_TRACK = SB_URL + '/functions/v1/logistix-track-create';
+const SB_CORTEX = SB_URL + '/functions/v1/logistix-cortex';
+const VOICE_TOKEN = SB_URL + '/functions/v1/logistix-voice-token';
+const CONTRACT = '0x289ee93a1717fbef60add4f630ed8356b7a7e8d3';
+
+let allShipments = [];
+let currentFilter = 'all';
+
+async function loadShipments() {
+  try {
+    const res = await fetch(`${SB_URL}/rest/v1/logistix_tracked?select=*&order=created_at.desc`, {
+      headers: { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON },
+    });
+    const data = await res.json();
+    if (Array.isArray(data)) { allShipments = data; renderAll(); }
+  } catch (e) { console.warn('Load failed:', e); }
+}
+
+function renderAll() {
+  renderZones();
+  renderTable();
+  renderBriefingStats();
+}
+
+function renderZones() {
+  const inbound = allShipments.filter(s => s.status === 'in_transit' || s.status === 'out_for_delivery');
+  const outbound = allShipments.filter(s => s.status === 'pre_transit');
+  const exceptions = allShipments.filter(s => s.status === 'failure' || s.status === 'return_to_sender');
+
+  document.getElementById('inboundCount').textContent = inbound.length;
+  document.getElementById('outboundCount').textContent = outbound.length;
+  document.getElementById('exceptionCount').textContent = exceptions.length;
+
+  document.getElementById('inboundList').innerHTML = inbound.length === 0
+    ? '<div class="zone-empty">No inbound shipments</div>'
+    : inbound.map(s => zoneCard(s, 'transit')).join('');
+
+  document.getElementById('outboundList').innerHTML = outbound.length === 0
+    ? '<div class="zone-empty">No outbound shipments</div>'
+    : outbound.map(s => zoneCard(s, 'pending')).join('');
+
+  document.getElementById('exceptionList').innerHTML = exceptions.length === 0
+    ? '<div class="zone-empty">No exceptions — all clear</div>'
+    : exceptions.map(s => zoneCard(s, 'exception')).join('');
+}
+
+function zoneCard(s, type) {
+  const cps = s.checkpoints || [];
+  const lastCp = cps[cps.length - 1];
+  const lastMsg = lastCp?.message || s.status;
+  const lastLoc = lastCp?.tracking_location;
+  const locStr = lastLoc ? [lastLoc.city, lastLoc.state].filter(Boolean).join(', ') : '';
+  const badgeClass = type === 'exception' ? 'badge-exception' : type === 'pending' ? 'badge-pending' : 'badge-transit';
+  const timeAgo = lastCp?.datetime ? timeSince(new Date(lastCp.datetime)) : '';
+
+  return `<div class="zone-item">
+    <div class="zone-item-top">
+      <span class="zone-item-carrier">${s.carrier || 'Unknown'}</span>
+      <span class="zone-item-badge ${badgeClass}">${s.status?.replace('_',' ') || 'unknown'}</span>
+    </div>
+    <div class="zone-item-route">${s.tracking_code}</div>
+    <div class="zone-item-detail">${locStr ? locStr + ' · ' : ''}${lastMsg}${timeAgo ? ' · ' + timeAgo : ''}</div>
+    ${type === 'exception' ? `<div class="zone-item-action"><button onclick="notifyClient('${s.tracking_code}')">Notify Client</button><button onclick="reschedule('${s.tracking_code}')">Reschedule</button></div>` : ''}
+    ${s.last_anchor_tx ? `<div style="margin-top:0.2rem;"><a href="https://sepolia.basescan.org/tx/${s.last_anchor_tx}" target="_blank" style="font-size:0.45rem;color:var(--blue);text-decoration:none;font-family:monospace;">On-chain ✓</a></div>` : ''}
+  </div>`;
+}
+
+function renderTable() {
+  const search = document.getElementById('globalSearch').value.toLowerCase();
+  let filtered = allShipments;
+
+  if (currentFilter !== 'all') {
+    filtered = filtered.filter(s => s.status === currentFilter);
+  }
+  if (search && search.length < 8) {
+    filtered = filtered.filter(s =>
+      (s.tracking_code || '').toLowerCase().includes(search) ||
+      (s.carrier || '').toLowerCase().includes(search) ||
+      (s.client_name || '').toLowerCase().includes(search)
+    );
+  }
+
+  const tbody = document.getElementById('shipTableBody');
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--dim);font-size:0.65rem;">No shipments found</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(s => {
+    const cps = s.checkpoints || [];
+    const lastCp = cps[cps.length - 1];
+    const lastTime = lastCp?.datetime ? new Date(lastCp.datetime).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+    const badgeClass = s.status === 'delivered' ? 'badge-delivered' : s.status === 'failure' || s.status === 'return_to_sender' ? 'badge-exception' : s.status === 'pre_transit' ? 'badge-pending' : 'badge-transit';
+
+    return `<tr>
+      <td class="mono">${s.tracking_code}</td>
+      <td>${s.carrier || '—'}</td>
+      <td><span class="zone-item-badge ${badgeClass}">${(s.status || 'unknown').replace('_',' ')}</span></td>
+      <td>${lastTime}</td>
+      <td>${s.est_delivery || '—'}</td>
+      <td>${s.last_anchor_tx ? `<a class="chain-link" href="https://sepolia.basescan.org/tx/${s.last_anchor_tx}" target="_blank">${s.last_anchor_tx.slice(0,10)}...</a>` : '<span style="color:var(--dim);">—</span>'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderBriefingStats() {
+  const total = allShipments.length;
+  const transit = allShipments.filter(s => s.status === 'in_transit' || s.status === 'out_for_delivery').length;
+  const delivered = allShipments.filter(s => s.status === 'delivered').length;
+  const exceptions = allShipments.filter(s => s.status === 'failure' || s.status === 'return_to_sender').length;
+  const pending = allShipments.filter(s => s.status === 'pre_transit').length;
+
+  document.getElementById('briefingStats').innerHTML = `
+    <div class="bstat"><span class="bstat-val" style="color:var(--text);">${total}</span><span class="bstat-label">Total</span></div>
+    <div class="bstat"><span class="bstat-val" style="color:var(--blue);">${transit}</span><span class="bstat-label">In Transit</span></div>
+    <div class="bstat"><span class="bstat-val" style="color:var(--amber);">${pending}</span><span class="bstat-label">Pending</span></div>
+    <div class="bstat"><span class="bstat-val" style="color:var(--green);">${delivered}</span><span class="bstat-label">Delivered</span></div>
+    <div class="bstat"><span class="bstat-val" style="color:var(--red);">${exceptions}</span><span class="bstat-label">Exceptions</span></div>
+  `;
+}
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTable();
+}
+
+function filterAll() { renderTable(); }
+
+function timeSince(date) {
+  const s = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (s < 60) return s + 's ago';
+  if (s < 3600) return Math.floor(s / 60) + 'm ago';
+  if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+  return Math.floor(s / 86400) + 'd ago';
+}
+
+// ── ADD TRACKING ──
+async function addTrack(code) {
+  code = (code || '').trim();
+  if (!code) return;
+  document.getElementById('globalSearch').value = '';
+
+  try {
+    const res = await fetch(SB_TRACK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ trackingCode: code }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      loadShipments();
+    } else {
+      alert('Error: ' + (data.error || 'Unknown'));
+    }
+  } catch (e) { alert('Error: ' + e.message); }
+}
+
+// ── PLACEHOLDER ACTIONS ──
+function notifyClient(code) { alert('Client notification for ' + code + ' — email template coming soon'); }
+function reschedule(code) { alert('Reschedule for ' + code + ' — scheduling flow coming soon'); }
+
+// ── CORTEX BRIEFING ──
+async function loadBriefing() {
+  try {
+    const shipCount = allShipments.length;
+    const transit = allShipments.filter(s => s.status === 'in_transit' || s.status === 'out_for_delivery').length;
+    const exceptions = allShipments.filter(s => s.status === 'failure' || s.status === 'return_to_sender').length;
+    const delivered = allShipments.filter(s => s.status === 'delivered').length;
+    const pending = allShipments.filter(s => s.status === 'pre_transit').length;
+
+    const exceptionDetails = allShipments
+      .filter(s => s.status === 'failure' || s.status === 'return_to_sender')
+      .map(s => `${s.carrier} ${s.tracking_code}: ${(s.checkpoints || []).slice(-1)[0]?.message || s.status}`)
+      .join('; ');
+
+    const msg = `Give me a morning operations briefing. I have ${shipCount} total shipments: ${transit} in transit, ${pending} pending pickup, ${delivered} delivered, ${exceptions} exceptions. ${exceptionDetails ? 'Exceptions: ' + exceptionDetails : 'No exceptions.'} Keep it under 4 sentences. Be direct.`;
+
+    const res = await fetch(SB_CORTEX, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg }),
+    });
+    const data = await res.json();
+    document.getElementById('briefingText').innerHTML = data.response || 'No briefing available.';
+  } catch (e) {
+    document.getElementById('briefingText').innerHTML = `<strong>${allShipments.length} shipments tracked.</strong> ${allShipments.filter(s => s.status === 'failure').length} exceptions need attention.`;
+  }
+}
+
+// ── VOICE (reuse token endpoint) ──
+let voiceWs = null, voiceActive = false, voiceCtx = null, voiceMic = null, voiceProc = null, voiceQueue = [], voicePlaying = false;
+
+async function toggleVoice() {
+  if (voiceActive) { stopVoice(); return; }
+  const btn = document.getElementById('voiceBtn');
+  btn.style.borderColor = 'var(--muted)'; btn.style.color = 'var(--muted)';
+
+  try {
+    const tRes = await fetch(VOICE_TOKEN, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+    const tData = await tRes.json();
+    if (!tData.token) return;
+
+    voiceMic = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 24000, channelCount: 1 } });
+    voiceCtx = new AudioContext({ sampleRate: 24000 });
+    voiceWs = new WebSocket('wss://api.x.ai/v1/realtime', [`xai-client-secret.${tData.token}`]);
+
+    voiceWs.onopen = () => {
+      voiceActive = true;
+      btn.style.borderColor = 'var(--red)'; btn.style.color = 'var(--red)';
+      btn.style.animation = 'pulse 1.5s infinite';
+
+      const shipSummary = allShipments.slice(0, 10).map(s => `${s.carrier} ${s.tracking_code}: ${s.status}`).join('; ');
+
+      voiceWs.send(JSON.stringify({ type: 'session.update', session: {
+        voice: 'rex',
+        instructions: `You are Rex, the CORTEX operations voice agent for a warehouse. The operator is on the floor — be brief and actionable. Current shipments: ${shipSummary || 'none loaded'}. Answer questions about shipment status, ETAs, exceptions. If they ask to track a new number, confirm it.`,
+        turn_detection: { type: 'server_vad', threshold: 0.8, silence_duration_ms: 800 },
+        audio: { input: { format: { type: 'audio/pcm', rate: 24000 } }, output: { format: { type: 'audio/pcm', rate: 24000 } } },
+      }}));
+
+      const src = voiceCtx.createMediaStreamSource(voiceMic);
+      voiceProc = voiceCtx.createScriptProcessor(4096, 1, 1);
+      src.connect(voiceProc); voiceProc.connect(voiceCtx.destination);
+      voiceProc.onaudioprocess = (e) => {
+        if (!voiceActive || !voiceWs || voiceWs.readyState !== 1) return;
+        const inp = e.inputBuffer.getChannelData(0);
+        const pcm = new Int16Array(inp.length);
+        for (let i = 0; i < inp.length; i++) { const s = Math.max(-1, Math.min(1, inp[i])); pcm[i] = s < 0 ? s * 0x8000 : s * 0x7FFF; }
+        voiceWs.send(JSON.stringify({ type: 'input_audio_buffer.append', audio: btoa(String.fromCharCode(...new Uint8Array(pcm.buffer))) }));
+      };
+    };
+
+    voiceWs.onmessage = (m) => {
+      const ev = JSON.parse(m.data);
+      if (ev.type === 'response.output_audio.delta' && ev.delta) playChunk(ev.delta);
+    };
+    voiceWs.onclose = () => { if (voiceActive) stopVoice(); };
+  } catch (e) { console.error(e); }
+}
+
+function stopVoice() {
+  voiceActive = false;
+  const btn = document.getElementById('voiceBtn');
+  btn.style.borderColor = 'var(--amber)'; btn.style.color = 'var(--amber)'; btn.style.animation = '';
+  if (voiceProc) voiceProc.disconnect();
+  if (voiceMic) voiceMic.getTracks().forEach(t => t.stop());
+  if (voiceCtx) voiceCtx.close();
+  if (voiceWs) voiceWs.close();
+  voiceProc = voiceMic = voiceCtx = voiceWs = null;
+}
+
+function playChunk(b64) { voiceQueue.push(b64); if (!voicePlaying) drainQ(); }
+async function drainQ() {
+  if (!voiceQueue.length) { voicePlaying = false; return; }
+  voicePlaying = true;
+  const b = atob(voiceQueue.shift());
+  const bytes = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) bytes[i] = b.charCodeAt(i);
+  const pcm = new Int16Array(bytes.buffer);
+  const f = new Float32Array(pcm.length); for (let i = 0; i < pcm.length; i++) f[i] = pcm[i] / 32768;
+  const ctx = voiceCtx || new AudioContext({ sampleRate: 24000 });
+  const buf = ctx.createBuffer(1, f.length, 24000); buf.getChannelData(0).set(f);
+  const s = ctx.createBufferSource(); s.buffer = buf; s.connect(ctx.destination);
+  s.onended = () => drainQ(); s.start();
+}
+
+// ── INIT ──
+loadShipments();
+setTimeout(loadBriefing, 1500);
+setInterval(loadShipments, 30000);
+</script>
+</body>
+</html>
