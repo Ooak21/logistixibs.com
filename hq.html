@@ -3,182 +3,305 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LOGISTIX HQ — Operations Dashboard</title>
+<title>LOGISTIX HQ — Command Center</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 :root {
-  --bg: #0a0a14; --surface: #10101e; --surface2: #161628;
-  --border: rgba(255,255,255,0.06); --border2: rgba(255,255,255,0.1);
+  --bg: #060610; --surface: #0c0c1a; --surface2: #12122a;
+  --border: rgba(255,255,255,0.05); --border2: rgba(255,255,255,0.1);
   --text: #e4e4e7; --muted: #71717a; --dim: #52525b;
-  --amber: #f59e0b; --blue: #60a5fa; --green: #34d399; --red: #f87171; --purple: #a78bfa;
+  --amber: #f59e0b; --blue: #60a5fa; --green: #34d399; --red: #f87171; --purple: #a78bfa; --cyan: #22d3ee;
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; -webkit-font-smoothing: antialiased; }
 
-/* ── HEADER ── */
-.hdr { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1.5rem; background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 20; }
-.hdr-brand { display: flex; align-items: center; gap: 0.5rem; }
-.hdr-logo { width: 1.4rem; height: 1.4rem; color: var(--amber); }
-.hdr-title { font-size: 0.9rem; font-weight: 700; letter-spacing: 0.05em; }
-.hdr-badge { font-size: 0.45rem; color: var(--amber); background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2); padding: 0.12rem 0.4rem; border-radius: 9999px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+.shell {
+  display: grid;
+  grid-template-columns: 210px 1fr 370px;
+  grid-template-rows: 44px 38px 1fr 48px;
+  height: 100vh;
+}
 
-.hdr-center { display: flex; align-items: center; gap: 0.5rem; flex: 1; max-width: 400px; margin: 0 1.5rem; }
-.hdr-search { flex: 1; padding: 0.4rem 0.7rem; background: rgba(255,255,255,0.04); border: 1px solid var(--border2); border-radius: 6px; color: #fff; font-size: 0.7rem; outline: none; font-family: monospace; }
-.hdr-search:focus { border-color: rgba(245,158,11,0.4); }
-.hdr-search::placeholder { color: var(--dim); }
-.hdr-track-btn { padding: 0.4rem 0.7rem; background: var(--amber); color: #000; border: none; border-radius: 6px; font-size: 0.55rem; font-weight: 700; cursor: pointer; letter-spacing: 0.1em; white-space: nowrap; }
-
-.hdr-right { display: flex; align-items: center; gap: 0.6rem; }
-.hdr-link { font-size: 0.55rem; color: var(--muted); text-decoration: none; }
-.hdr-link:hover { color: var(--text); }
-
-.voice-fab { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--amber); background: rgba(245,158,11,0.08); color: var(--amber); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s; }
-.voice-fab:hover { background: var(--amber); color: #000; }
-
-/* ── BRIEFING ── */
-.briefing { margin: 1rem 1.5rem; padding: 1.25rem 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; position: relative; }
-.briefing-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; }
-.briefing-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+/* ── KPI STRIP ── */
+.kpi { grid-column: 1/-1; grid-row: 2; display: flex; align-items: center; gap: 0.4rem; padding: 0 0.75rem; background: var(--surface); border-bottom: 1px solid var(--border); overflow-x: auto; }
+.kpi-cell { display: flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.55rem; border-radius: 4px; border: 1px solid var(--border); background: rgba(255,255,255,0.015); white-space: nowrap; flex-shrink: 0; }
+.kpi-val { font-size: 0.95rem; font-weight: 700; }
+.kpi-label { font-size: 0.4rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em; }
+.kpi-alert { flex: 1; display: flex; align-items: center; gap: 0.4rem; padding: 0 0.5rem; min-width: 0; cursor: pointer; }
+.kpi-alert-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--amber); animation: pulse 2s infinite; flex-shrink: 0; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
-.briefing-label { font-size: 0.6rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted); }
-.briefing-text { font-size: 0.82rem; line-height: 1.7; color: rgba(255,255,255,0.75); }
-.briefing-text strong { color: var(--text); }
-.briefing-loading { font-size: 0.7rem; color: var(--dim); }
-.briefing-stats { display: flex; gap: 1rem; margin-top: 0.75rem; flex-wrap: wrap; }
-.bstat { display: flex; align-items: center; gap: 0.3rem; }
-.bstat-val { font-size: 1.1rem; font-weight: 700; }
-.bstat-label { font-size: 0.5rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+.kpi-alert-text { font-size: 0.55rem; color: rgba(255,255,255,0.5); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* ── ZONES ── */
-.zones { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; padding: 0 1.5rem 1rem; }
-@media (max-width: 900px) { .zones { grid-template-columns: 1fr; } }
+/* ── INTEL RAIL ── */
+.intel { grid-column: 1; grid-row: 3; border-right: 1px solid var(--border); overflow-y: auto; padding: 0.5rem; display: flex; flex-direction: column; gap: 0.4rem; background: var(--surface); }
+.icard { background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 6px; padding: 0.5rem 0.6rem; }
+.icard-title { font-size: 0.4rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; color: var(--dim); margin-bottom: 0.35rem; }
+.icard-row { display: flex; align-items: center; justify-content: space-between; font-size: 0.6rem; margin-bottom: 0.15rem; }
+.icard-bar { height: 3px; border-radius: 2px; background: rgba(255,255,255,0.06); flex: 1; margin: 0 0.4rem; position: relative; }
+.icard-bar-fill { position: absolute; left: 0; top: 0; height: 100%; border-radius: 2px; }
+.icard-score { font-size: 0.55rem; font-weight: 700; min-width: 1.5rem; text-align: right; }
+.icard-big { font-size: 1.3rem; font-weight: 700; }
+.icard-sub { font-size: 0.45rem; color: var(--dim); }
+.icard-list-item { font-size: 0.55rem; margin-bottom: 0.1rem; display: flex; justify-content: space-between; }
+.icard-list-count { font-weight: 700; font-size: 0.5rem; padding: 0.05rem 0.25rem; border-radius: 3px; background: rgba(248,113,113,0.12); color: var(--red); }
+.icard-bars { display: flex; align-items: flex-end; gap: 2px; height: 32px; }
+.icard-bars div { flex: 1; border-radius: 1px 1px 0 0; background: rgba(245,158,11,0.25); min-width: 0; }
+.icard-bars div.today { background: var(--amber); }
+.icard-risk-item { font-size: 0.5rem; padding: 0.2rem 0; border-bottom: 1px solid rgba(255,255,255,0.03); display: flex; justify-content: space-between; }
+.icard-risk-item:last-child { border: none; }
 
-.zone { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; max-height: 400px; display: flex; flex-direction: column; }
-.zone-header { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); flex-shrink: 0; }
-.zone-title { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; }
-.zone-count { font-size: 0.55rem; color: var(--dim); background: rgba(255,255,255,0.04); padding: 0.15rem 0.4rem; border-radius: 9999px; }
-.zone-list { flex: 1; overflow-y: auto; }
-.zone-empty { padding: 2rem 1rem; text-align: center; font-size: 0.65rem; color: var(--dim); }
+/* ── ORDER LIST ── */
+.orders { grid-column: 2; grid-row: 3; display: flex; flex-direction: column; overflow: hidden; }
+.orders-header { display: flex; align-items: center; justify-content: space-between; padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border); flex-shrink: 0; gap: 0.4rem; }
+.orders-filters { display: flex; gap: 0.15rem; }
+.ofilt { padding: 0.2rem 0.45rem; font-size: 0.45rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--dim); background: none; border: 1px solid transparent; border-radius: 3px; cursor: pointer; transition: all 0.2s; }
+.ofilt:hover { color: var(--text); }
+.ofilt.active { color: var(--amber); border-color: rgba(245,158,11,0.25); background: rgba(245,158,11,0.06); }
+.orders-search { padding: 0.25rem 0.5rem; background: rgba(255,255,255,0.03); border: 1px solid var(--border2); border-radius: 4px; color: #fff; font-size: 0.55rem; font-family: monospace; outline: none; width: 140px; }
+.orders-search:focus { border-color: rgba(245,158,11,0.4); }
+.orders-search::placeholder { color: var(--dim); }
+.new-order-btn { padding: 0.25rem 0.6rem; background: var(--amber); color: #000; border: none; border-radius: 4px; font-size: 0.45rem; font-weight: 700; letter-spacing: 0.1em; cursor: pointer; white-space: nowrap; }
+.new-order-btn:hover { background: #fbbf24; }
 
-.zone-item { padding: 0.65rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.03); cursor: pointer; transition: background 0.2s; }
-.zone-item:hover { background: rgba(255,255,255,0.02); }
-.zone-item-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.25rem; }
-.zone-item-carrier { font-size: 0.65rem; font-weight: 600; }
-.zone-item-badge { font-size: 0.45rem; font-weight: 700; padding: 0.1rem 0.35rem; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.08em; }
-.badge-transit { background: rgba(96,165,250,0.15); color: var(--blue); }
-.badge-delivered { background: rgba(52,211,153,0.15); color: var(--green); }
-.badge-exception { background: rgba(248,113,113,0.15); color: var(--red); }
-.badge-pending { background: rgba(245,158,11,0.15); color: var(--amber); }
-.zone-item-route { font-size: 0.6rem; color: var(--muted); }
-.zone-item-detail { font-size: 0.55rem; color: var(--dim); margin-top: 0.2rem; }
-.zone-item-action { margin-top: 0.3rem; }
-.zone-item-action button { padding: 0.2rem 0.5rem; background: rgba(255,255,255,0.04); border: 1px solid var(--border2); border-radius: 4px; color: var(--muted); font-size: 0.5rem; cursor: pointer; margin-right: 0.3rem; }
-.zone-item-action button:hover { color: var(--text); border-color: var(--amber); }
+.orders-cols { display: grid; grid-template-columns: 6px 1fr 52px 70px 1fr 50px 55px 1fr 45px 50px; gap: 0; padding: 0 0.6rem; border-bottom: 1px solid var(--border); background: var(--surface2); }
+.ocol { font-size: 0.38rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: var(--dim); padding: 0.3rem 0.2rem; cursor: pointer; user-select: none; }
+.ocol:hover { color: var(--muted); }
 
-/* ── ALL SHIPMENTS TABLE ── */
-.all-section { padding: 0 1.5rem 1.5rem; }
-.all-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
-.all-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
-.all-filters { display: flex; gap: 0.3rem; }
-.filter-btn { padding: 0.25rem 0.5rem; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 4px; color: var(--dim); font-size: 0.5rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
-.filter-btn:hover { color: var(--text); }
-.filter-btn.active { color: var(--amber); border-color: rgba(245,158,11,0.3); background: rgba(245,158,11,0.06); }
+.orders-list { flex: 1; overflow-y: auto; }
+.orow { display: grid; grid-template-columns: 6px 1fr 52px 70px 1fr 50px 55px 1fr 45px 50px; gap: 0; padding: 0.3rem 0.6rem; border-bottom: 1px solid rgba(255,255,255,0.02); cursor: pointer; transition: background 0.15s; align-items: center; }
+.orow:hover { background: rgba(255,255,255,0.025); }
+.orow.selected { background: rgba(245,158,11,0.06); border-left: 2px solid var(--amber); }
+.orow-dot { width: 6px; height: 6px; border-radius: 50%; }
+.orow-id { font-family: monospace; font-size: 0.55rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.orow-tag { font-size: 0.38rem; font-weight: 700; padding: 0.08rem 0.25rem; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.06em; display: inline-block; }
+.orow-carrier { font-size: 0.55rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.orow-route { font-size: 0.5rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.orow-eta { font-size: 0.5rem; }
+.orow-event { font-size: 0.45rem; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.orow-age { font-size: 0.45rem; color: var(--dim); }
+.orow-chain { font-size: 0.45rem; }
+.orow-chain a { color: var(--blue); text-decoration: none; font-family: monospace; }
 
-.ship-table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
-.ship-table th { padding: 0.5rem 0.75rem; font-size: 0.5rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: var(--dim); text-align: left; border-bottom: 1px solid var(--border); background: var(--surface2); }
-.ship-table td { padding: 0.5rem 0.75rem; font-size: 0.65rem; border-bottom: 1px solid rgba(255,255,255,0.02); }
-.ship-table tr:hover { background: rgba(255,255,255,0.02); }
-.ship-table .mono { font-family: monospace; font-size: 0.6rem; color: var(--muted); }
-.ship-table .chain-link { font-family: monospace; font-size: 0.5rem; color: var(--blue); text-decoration: none; }
+/* ── DETAIL PANEL ── */
+.detail { grid-column: 3; grid-row: 3; border-left: 1px solid var(--border); background: var(--surface); display: flex; flex-direction: column; overflow: hidden; }
+.detail-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.dtab { flex: 1; padding: 0.5rem 0; font-size: 0.45rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; text-align: center; color: var(--dim); background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; }
+.dtab:hover { color: var(--muted); }
+.dtab.active { color: var(--amber); border-bottom-color: var(--amber); }
+.detail-body { flex: 1; overflow-y: auto; padding: 0.6rem; }
+.detail-empty { display: flex; align-items: center; justify-content: center; height: 100%; font-size: 0.55rem; color: var(--dim); text-align: center; line-height: 1.8; }
+
+.dfield { display: flex; justify-content: space-between; font-size: 0.6rem; padding: 0.2rem 0; }
+.dfield-key { color: var(--dim); }
+.dfield-val { color: rgba(255,255,255,0.75); text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis; }
+.ddivider { height: 1px; background: var(--border); margin: 0.5rem 0; }
+.dsection { font-size: 0.4rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; color: var(--dim); margin: 0.5rem 0 0.3rem; }
+
+.dcp { background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 4px; padding: 0.4rem 0.5rem; margin-bottom: 0.3rem; }
+.dcp-type { font-size: 0.5rem; font-weight: 700; text-transform: uppercase; }
+.dcp-time { font-size: 0.4rem; color: var(--dim); }
+.dcp-msg { font-size: 0.5rem; color: var(--muted); margin-top: 0.1rem; }
+.dcp-loc { font-size: 0.4rem; color: var(--dim); }
+.dcp-tx { font-family: monospace; font-size: 0.4rem; margin-top: 0.1rem; }
+.dcp-tx a { color: var(--blue); text-decoration: none; }
+
+.cortex-box { background: rgba(245,158,11,0.04); border: 1px solid rgba(245,158,11,0.15); border-radius: 6px; padding: 0.5rem; margin-bottom: 0.5rem; }
+.cortex-box-label { font-size: 0.4rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; color: var(--amber); margin-bottom: 0.25rem; }
+.cortex-box-text { font-size: 0.55rem; color: rgba(255,255,255,0.6); line-height: 1.6; }
+
+#detailMap { width: 100%; height: 100%; background: var(--bg); }
+.leaflet-container { background: var(--bg) !important; }
+
+/* ── FEED ── */
+.feed { grid-column: 1/-1; grid-row: 4; display: flex; align-items: center; gap: 0.5rem; padding: 0 0.75rem; background: var(--surface); border-top: 1px solid var(--border); overflow-x: auto; }
+.feed-label { font-family: monospace; font-size: 0.38rem; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(255,255,255,0.12); white-space: nowrap; flex-shrink: 0; }
+.feed-card { flex-shrink: 0; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 3px; padding: 0.25rem 0.5rem; min-width: 140px; }
+.feed-card.new { border-color: rgba(245,158,11,0.35); animation: feedFlash 1.2s; }
+.feed-card.exception { border-color: rgba(248,113,113,0.35); }
+@keyframes feedFlash { 0%{background:rgba(245,158,11,0.12)} 100%{background:rgba(255,255,255,0.02)} }
+.feed-type { font-family: monospace; font-size: 0.38rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--amber); }
+.feed-route { font-size: 0.42rem; color: rgba(255,255,255,0.4); }
+.feed-tx { font-family: monospace; font-size: 0.38rem; }
+.feed-tx a { color: rgba(255,255,255,0.3); text-decoration: none; }
+
+/* ── MODAL ── */
+.modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--surface2); border: 1px solid var(--border2); border-radius: 10px; width: 460px; max-height: 85vh; overflow-y: auto; padding: 1.25rem; }
+.modal-title { font-size: 0.75rem; font-weight: 700; margin-bottom: 0.75rem; }
+.modal-row { margin-bottom: 0.5rem; }
+.modal-label { font-size: 0.4rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.15em; color: var(--dim); margin-bottom: 0.15rem; display: block; }
+.modal-input, .modal-select { width: 100%; padding: 0.4rem 0.55rem; background: rgba(255,255,255,0.04); border: 1px solid var(--border2); border-radius: 4px; color: #fff; font-size: 0.65rem; font-family: 'Inter', sans-serif; outline: none; }
+.modal-input:focus, .modal-select:focus { border-color: rgba(245,158,11,0.5); }
+.modal-select option { background: var(--surface2); }
+.modal-input::placeholder { color: var(--dim); }
+.modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+.modal-actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
+.modal-submit { flex: 1; padding: 0.5rem; background: var(--amber); color: #000; border: none; border-radius: 4px; font-size: 0.55rem; font-weight: 700; letter-spacing: 0.1em; cursor: pointer; }
+.modal-submit:hover { background: #fbbf24; }
+.modal-submit:disabled { opacity: 0.4; cursor: not-allowed; }
+.modal-cancel { padding: 0.5rem 1rem; background: none; border: 1px solid var(--border2); border-radius: 4px; color: var(--muted); font-size: 0.55rem; cursor: pointer; }
+.modal-cancel:hover { color: var(--text); border-color: var(--muted); }
+
+/* ── VOICE FAB ── */
+.voice-fab { position: fixed; bottom: 64px; right: 16px; width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--amber); background: rgba(245,158,11,0.08); color: var(--amber); cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 50; transition: all 0.3s; }
+.voice-fab:hover { background: var(--amber); color: #000; }
+.voice-fab.active { border-color: var(--red); color: var(--red); animation: pulse 1.5s infinite; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 1100px) {
+  .shell { grid-template-columns: 1fr 370px; }
+  .intel { display: none; }
+}
+@media (max-width: 768px) {
+  .shell { grid-template-columns: 1fr; grid-template-rows: 44px 38px 1fr 48px; }
+  .detail { display: none; }
+  .feed { display: none; }
+}
 </style>
 </head>
 <body>
 
-<!-- HEADER -->
-<div class="hdr">
-  <div class="hdr-brand">
-    <svg class="hdr-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
-    <div class="hdr-title">LOGISTIX HQ</div>
-    <div class="hdr-badge">Operations</div>
+<div class="shell">
+  <div id="nav-mount"></div>
+  <script src="./nav.js"></script>
+
+  <!-- KPI STRIP -->
+  <div class="kpi">
+    <div class="kpi-cell"><span class="kpi-val" style="color:var(--blue)" id="kActive">0</span><span class="kpi-label">Active</span></div>
+    <div class="kpi-cell"><span class="kpi-val" style="color:var(--amber)" id="kPending">0</span><span class="kpi-label">Pending</span></div>
+    <div class="kpi-cell"><span class="kpi-val" style="color:var(--red)" id="kExceptions">0</span><span class="kpi-label">Exceptions</span></div>
+    <div class="kpi-cell"><span class="kpi-val" style="color:var(--green)" id="kDelivered">0</span><span class="kpi-label">Delivered 24h</span></div>
+    <div class="kpi-cell"><span class="kpi-val" style="color:var(--green)" id="kOnTime">—</span><span class="kpi-label">On-Time</span></div>
+    <div class="kpi-cell"><span class="kpi-val" style="color:var(--purple)" id="kCostMile">—</span><span class="kpi-label">$/Mile</span></div>
+    <div class="kpi-alert" onclick="openCortexDrawer()">
+      <div class="kpi-alert-dot"></div>
+      <div class="kpi-alert-text" id="kAlert">Loading CORTEX briefing...</div>
+    </div>
   </div>
-  <div class="hdr-center">
-    <input class="hdr-search" id="globalSearch" placeholder="Search tracking #, carrier, client..." onkeydown="if(event.key==='Enter'){if(this.value.length>8)addTrack(this.value);else filterAll()}">
-    <button class="hdr-track-btn" onclick="addTrack(document.getElementById('globalSearch').value)">+ TRACK</button>
+
+  <!-- INTEL RAIL -->
+  <div class="intel">
+    <div class="icard">
+      <div class="icard-title">Carrier Performance</div>
+      <div id="intelCarrier"><div class="icard-sub">Loading...</div></div>
+    </div>
+    <div class="icard">
+      <div class="icard-title">Exception Hotspots</div>
+      <div id="intelExceptions"><div class="icard-sub">No data</div></div>
+    </div>
+    <div class="icard">
+      <div class="icard-title">Cost / Mile Avg</div>
+      <div id="intelCost"><div class="icard-big" style="color:var(--purple)">—</div><div class="icard-sub">Awaiting cost data</div></div>
+    </div>
+    <div class="icard">
+      <div class="icard-title">Order Velocity (7d)</div>
+      <div id="intelVelocity" class="icard-bars"></div>
+    </div>
+    <div class="icard">
+      <div class="icard-title">Delay Risk</div>
+      <div id="intelDelay"><div class="icard-sub">All clear</div></div>
+    </div>
   </div>
-  <div class="hdr-right">
-    <a href="./ops.html" class="hdr-link">Ops Center</a>
-    <a href="./dashboard.html" class="hdr-link">Simulator</a>
-    <button class="voice-fab" onclick="toggleVoice()" id="voiceBtn" title="Talk to Rex">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
-    </button>
+
+  <!-- ORDER LIST -->
+  <div class="orders">
+    <div class="orders-header">
+      <div class="orders-filters">
+        <button class="ofilt active" onclick="setFilter('all',this)">All</button>
+        <button class="ofilt" onclick="setFilter('in_transit',this)">Transit</button>
+        <button class="ofilt" onclick="setFilter('pre_transit',this)">Pending</button>
+        <button class="ofilt" onclick="setFilter('failure',this)">Exceptions</button>
+        <button class="ofilt" onclick="setFilter('delivered',this)">Delivered</button>
+      </div>
+      <input class="orders-search" id="orderSearch" placeholder="Search..." oninput="renderOrderList()">
+      <button class="new-order-btn" onclick="openNewOrder()">+ NEW ORDER</button>
+    </div>
+    <div class="orders-cols">
+      <div class="ocol"></div>
+      <div class="ocol" onclick="sortBy('tracking_code')">Tracking #</div>
+      <div class="ocol" onclick="sortBy('cargo_category')">Type</div>
+      <div class="ocol" onclick="sortBy('carrier')">Carrier</div>
+      <div class="ocol" onclick="sortBy('route')">Route</div>
+      <div class="ocol" onclick="sortBy('est_delivery')">ETA</div>
+      <div class="ocol" onclick="sortBy('status')">Status</div>
+      <div class="ocol">Last Event</div>
+      <div class="ocol" onclick="sortBy('created_at')">Age</div>
+      <div class="ocol">Chain</div>
+    </div>
+    <div class="orders-list" id="orderList">
+      <div class="detail-empty">Loading shipments...</div>
+    </div>
+  </div>
+
+  <!-- DETAIL PANEL -->
+  <div class="detail">
+    <div class="detail-tabs">
+      <button class="dtab active" onclick="switchDetail('info',this)">Detail</button>
+      <button class="dtab" onclick="switchDetail('map',this)">Map</button>
+      <button class="dtab" onclick="switchDetail('cortex',this)">CORTEX</button>
+    </div>
+    <div class="detail-body" id="detailBody">
+      <div class="detail-empty">Select a shipment to view details<br><span style="font-size:0.45rem;color:var(--dim);margin-top:0.3rem;display:inline-block;">Click any row in the order list</span></div>
+    </div>
+  </div>
+
+  <!-- FEED -->
+  <div class="feed" id="feedStrip">
+    <div class="feed-label">Live Feed</div>
   </div>
 </div>
 
-<!-- BRIEFING -->
-<div class="briefing" id="briefing">
-  <div class="briefing-header">
-    <div class="briefing-dot"></div>
-    <div class="briefing-label">CORTEX Morning Briefing</div>
+<!-- NEW ORDER MODAL -->
+<div class="modal-overlay" id="orderModal">
+  <div class="modal">
+    <div class="modal-title">New Shipment Order</div>
+    <div class="modal-row">
+      <label class="modal-label">Tracking Code</label>
+      <input class="modal-input" id="mTrack" placeholder="Carrier tracking number" style="font-family:monospace">
+    </div>
+    <div class="modal-row">
+      <label class="modal-label">Cargo Category</label>
+      <select class="modal-select" id="mCargo">
+        <option value="structural_steel">Structural Steel</option>
+        <option value="concrete">Concrete / Aggregate</option>
+        <option value="electrical">Electrical Transformers</option>
+        <option value="heavy_equipment">Heavy Equipment</option>
+        <option value="pipe_fittings">Pipe / Valve Fittings</option>
+        <option value="hvac">HVAC Systems</option>
+        <option value="general">General Freight</option>
+      </select>
+    </div>
+    <div class="modal-grid">
+      <div class="modal-row"><label class="modal-label">Client / Project</label><input class="modal-input" id="mClient" placeholder="Project name"></div>
+      <div class="modal-row"><label class="modal-label">Carrier</label><input class="modal-input" id="mCarrier" placeholder="FedEx, UPS, etc."></div>
+    </div>
+    <div class="modal-grid">
+      <div class="modal-row"><label class="modal-label">Origin</label><input class="modal-input" id="mOrigin" placeholder="City, ST"></div>
+      <div class="modal-row"><label class="modal-label">Destination</label><input class="modal-input" id="mDest" placeholder="City, ST"></div>
+    </div>
+    <div class="modal-grid">
+      <div class="modal-row"><label class="modal-label">Weight (lbs)</label><input class="modal-input" id="mWeight" type="number" placeholder="0"></div>
+      <div class="modal-row"><label class="modal-label">Est. Miles</label><input class="modal-input" id="mMiles" type="number" placeholder="0"></div>
+    </div>
+    <div class="modal-grid">
+      <div class="modal-row"><label class="modal-label">Total Cost ($)</label><input class="modal-input" id="mCost" type="number" placeholder="0.00" step="0.01"></div>
+      <div class="modal-row"><label class="modal-label">Notify Email</label><input class="modal-input" id="mEmail" type="email" placeholder="recipient@email.com"></div>
+    </div>
+    <div class="modal-row"><label class="modal-label">Notes</label><input class="modal-input" id="mNotes" placeholder="Special handling, PO number, etc."></div>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+      <button class="modal-submit" id="mSubmit" onclick="submitOrder()">Create Order</button>
+    </div>
   </div>
-  <div class="briefing-text" id="briefingText">
-    <span class="briefing-loading">Loading briefing...</span>
-  </div>
-  <div class="briefing-stats" id="briefingStats"></div>
 </div>
 
-<!-- ZONES -->
-<div class="zones">
-  <div class="zone">
-    <div class="zone-header">
-      <div class="zone-title" style="color:var(--blue);">Inbound Today</div>
-      <div class="zone-count" id="inboundCount">0</div>
-    </div>
-    <div class="zone-list" id="inboundList"><div class="zone-empty">No inbound shipments</div></div>
-  </div>
-  <div class="zone">
-    <div class="zone-header">
-      <div class="zone-title" style="color:var(--amber);">Outbound Today</div>
-      <div class="zone-count" id="outboundCount">0</div>
-    </div>
-    <div class="zone-list" id="outboundList"><div class="zone-empty">No outbound shipments</div></div>
-  </div>
-  <div class="zone">
-    <div class="zone-header">
-      <div class="zone-title" style="color:var(--red);">Exceptions</div>
-      <div class="zone-count" id="exceptionCount">0</div>
-    </div>
-    <div class="zone-list" id="exceptionList"><div class="zone-empty">No exceptions — all clear</div></div>
-  </div>
-</div>
-
-<!-- ALL SHIPMENTS -->
-<div class="all-section">
-  <div class="all-header">
-    <div class="all-title">All Shipments</div>
-    <div class="all-filters">
-      <button class="filter-btn active" onclick="setFilter('all',this)">All</button>
-      <button class="filter-btn" onclick="setFilter('in_transit',this)">In Transit</button>
-      <button class="filter-btn" onclick="setFilter('delivered',this)">Delivered</button>
-      <button class="filter-btn" onclick="setFilter('failure',this)">Exceptions</button>
-      <button class="filter-btn" onclick="setFilter('pre_transit',this)">Pending</button>
-    </div>
-  </div>
-  <table class="ship-table">
-    <thead>
-      <tr>
-        <th>Tracking #</th>
-        <th>Carrier</th>
-        <th>Status</th>
-        <th>Last Update</th>
-        <th>ETA</th>
-        <th>On-Chain</th>
-      </tr>
-    </thead>
-    <tbody id="shipTableBody">
-      <tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--dim);font-size:0.65rem;">Loading shipments...</td></tr>
-    </tbody>
-  </table>
-</div>
+<!-- VOICE FAB -->
+<button class="voice-fab" id="voiceBtn" onclick="toggleVoice()" title="Talk to Rex">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+</button>
 
 <script>
 const SB_URL = 'https://jtifhcvbgxqwlywugvjv.supabase.co';
@@ -186,11 +309,48 @@ const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsIn
 const SB_TRACK = SB_URL + '/functions/v1/logistix-track-create';
 const SB_CORTEX = SB_URL + '/functions/v1/logistix-cortex';
 const VOICE_TOKEN = SB_URL + '/functions/v1/logistix-voice-token';
-const CONTRACT = '0x289ee93a1717fbef60add4f630ed8356b7a7e8d3';
+
+const CARGO_MAP = {
+  structural_steel: { label: 'STL', color: '#60a5fa', bg: 'rgba(96,165,250,0.12)' },
+  concrete: { label: 'CONC', color: '#a1a1aa', bg: 'rgba(161,161,170,0.12)' },
+  electrical: { label: 'ELEC', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
+  heavy_equipment: { label: 'HVYEQ', color: '#a78bfa', bg: 'rgba(167,139,250,0.12)' },
+  pipe_fittings: { label: 'PIPE', color: '#34d399', bg: 'rgba(52,211,153,0.12)' },
+  hvac: { label: 'HVAC', color: '#71717a', bg: 'rgba(113,113,122,0.12)' },
+  general: { label: 'GEN', color: '#52525b', bg: 'rgba(82,82,91,0.12)' },
+};
 
 let allShipments = [];
 let currentFilter = 'all';
+let currentSort = { key: 'created_at', asc: false };
+let selectedId = null;
+let detailMap = null;
+let detailMode = 'info';
 
+// ── STATUS HELPERS ──
+const STATUS_COLORS = {
+  in_transit: '#60a5fa', out_for_delivery: '#60a5fa', pre_transit: '#f59e0b',
+  delivered: '#34d399', failure: '#f87171', return_to_sender: '#f87171',
+};
+const STATUS_LABELS = {
+  in_transit: 'In Transit', out_for_delivery: 'Out for Delivery', pre_transit: 'Pending',
+  delivered: 'Delivered', failure: 'Exception', return_to_sender: 'Returned',
+};
+
+function timeSince(date) {
+  const s = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
+  if (s < 60) return s + 's';
+  if (s < 3600) return Math.floor(s / 60) + 'm';
+  if (s < 86400) return Math.floor(s / 3600) + 'h';
+  return Math.floor(s / 86400) + 'd';
+}
+
+function shortCity(str) {
+  if (!str) return '—';
+  return str.split(',')[0].slice(0, 14);
+}
+
+// ── DATA LOAD ──
 async function loadShipments() {
   try {
     const res = await fetch(`${SB_URL}/rest/v1/logistix_tracked?select=*&order=created_at.desc`, {
@@ -202,130 +362,373 @@ async function loadShipments() {
 }
 
 function renderAll() {
-  renderZones();
-  renderTable();
-  renderBriefingStats();
+  renderKPI();
+  renderIntelRail();
+  renderOrderList();
+  renderFeed();
+  if (selectedId) renderDetail(allShipments.find(s => s.id === selectedId));
 }
 
-function renderZones() {
-  const inbound = allShipments.filter(s => s.status === 'in_transit' || s.status === 'out_for_delivery');
-  const outbound = allShipments.filter(s => s.status === 'pre_transit');
-  const exceptions = allShipments.filter(s => s.status === 'failure' || s.status === 'return_to_sender');
+// ── KPI ──
+function renderKPI() {
+  const active = allShipments.filter(s => s.status === 'in_transit' || s.status === 'out_for_delivery').length;
+  const pending = allShipments.filter(s => s.status === 'pre_transit').length;
+  const exceptions = allShipments.filter(s => s.status === 'failure' || s.status === 'return_to_sender').length;
+  const now = Date.now();
+  const delivered24 = allShipments.filter(s => s.status === 'delivered' && s.delivered_at && (now - new Date(s.delivered_at).getTime()) < 86400000).length;
+  const total = allShipments.length;
+  const noException = allShipments.filter(s => s.status !== 'failure' && s.status !== 'return_to_sender').length;
+  const onTime = total > 0 ? Math.round((noException / total) * 100) + '%' : '—';
 
-  document.getElementById('inboundCount').textContent = inbound.length;
-  document.getElementById('outboundCount').textContent = outbound.length;
-  document.getElementById('exceptionCount').textContent = exceptions.length;
+  const withCost = allShipments.filter(s => s.total_cost && s.estimated_miles && s.estimated_miles > 0);
+  const avgCpm = withCost.length > 0 ? (withCost.reduce((a, s) => a + s.total_cost / s.estimated_miles, 0) / withCost.length).toFixed(2) : '—';
 
-  document.getElementById('inboundList').innerHTML = inbound.length === 0
-    ? '<div class="zone-empty">No inbound shipments</div>'
-    : inbound.map(s => zoneCard(s, 'transit')).join('');
-
-  document.getElementById('outboundList').innerHTML = outbound.length === 0
-    ? '<div class="zone-empty">No outbound shipments</div>'
-    : outbound.map(s => zoneCard(s, 'pending')).join('');
-
-  document.getElementById('exceptionList').innerHTML = exceptions.length === 0
-    ? '<div class="zone-empty">No exceptions — all clear</div>'
-    : exceptions.map(s => zoneCard(s, 'exception')).join('');
+  document.getElementById('kActive').textContent = active;
+  document.getElementById('kPending').textContent = pending;
+  document.getElementById('kExceptions').textContent = exceptions;
+  document.getElementById('kDelivered').textContent = delivered24;
+  document.getElementById('kOnTime').textContent = onTime;
+  document.getElementById('kCostMile').textContent = avgCpm === '—' ? '—' : '$' + avgCpm;
 }
 
-function zoneCard(s, type) {
-  const cps = s.checkpoints || [];
-  const lastCp = cps[cps.length - 1];
-  const lastMsg = lastCp?.message || s.status;
-  const lastLoc = lastCp?.tracking_location;
-  const locStr = lastLoc ? [lastLoc.city, lastLoc.state].filter(Boolean).join(', ') : '';
-  const badgeClass = type === 'exception' ? 'badge-exception' : type === 'pending' ? 'badge-pending' : 'badge-transit';
-  const timeAgo = lastCp?.datetime ? timeSince(new Date(lastCp.datetime)) : '';
-
-  return `<div class="zone-item">
-    <div class="zone-item-top">
-      <span class="zone-item-carrier">${s.carrier || 'Unknown'}</span>
-      <span class="zone-item-badge ${badgeClass}">${s.status?.replace('_',' ') || 'unknown'}</span>
-    </div>
-    <div class="zone-item-route">${s.tracking_code}</div>
-    <div class="zone-item-detail">${locStr ? locStr + ' · ' : ''}${lastMsg}${timeAgo ? ' · ' + timeAgo : ''}</div>
-    ${type === 'exception' ? `<div class="zone-item-action"><button onclick="notifyClient('${s.tracking_code}')">Notify Client</button><button onclick="reschedule('${s.tracking_code}')">Reschedule</button></div>` : ''}
-    ${s.last_anchor_tx ? `<div style="margin-top:0.2rem;"><a href="https://sepolia.basescan.org/tx/${s.last_anchor_tx}" target="_blank" style="font-size:0.45rem;color:var(--blue);text-decoration:none;font-family:monospace;">On-chain ✓</a></div>` : ''}
-  </div>`;
+// ── INTEL RAIL ──
+function renderIntelRail() {
+  renderCarrierScores();
+  renderExceptionPatterns();
+  renderCostCard();
+  renderVelocity();
+  renderDelayRisk();
 }
 
-function renderTable() {
-  const search = document.getElementById('globalSearch').value.toLowerCase();
-  let filtered = allShipments;
-
-  if (currentFilter !== 'all') {
-    filtered = filtered.filter(s => s.status === currentFilter);
-  }
-  if (search && search.length < 8) {
-    filtered = filtered.filter(s =>
-      (s.tracking_code || '').toLowerCase().includes(search) ||
-      (s.carrier || '').toLowerCase().includes(search) ||
-      (s.client_name || '').toLowerCase().includes(search)
-    );
-  }
-
-  const tbody = document.getElementById('shipTableBody');
-  if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--dim);font-size:0.65rem;">No shipments found</td></tr>';
-    return;
-  }
-
-  tbody.innerHTML = filtered.map(s => {
-    const cps = s.checkpoints || [];
-    const lastCp = cps[cps.length - 1];
-    const lastTime = lastCp?.datetime ? new Date(lastCp.datetime).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
-    const badgeClass = s.status === 'delivered' ? 'badge-delivered' : s.status === 'failure' || s.status === 'return_to_sender' ? 'badge-exception' : s.status === 'pre_transit' ? 'badge-pending' : 'badge-transit';
-
-    return `<tr>
-      <td class="mono">${s.tracking_code}</td>
-      <td>${s.carrier || '—'}</td>
-      <td><span class="zone-item-badge ${badgeClass}">${(s.status || 'unknown').replace('_',' ')}</span></td>
-      <td>${lastTime}</td>
-      <td>${s.est_delivery || '—'}</td>
-      <td>${s.last_anchor_tx ? `<a class="chain-link" href="https://sepolia.basescan.org/tx/${s.last_anchor_tx}" target="_blank">${s.last_anchor_tx.slice(0,10)}...</a>` : '<span style="color:var(--dim);">—</span>'}</td>
-    </tr>`;
+function renderCarrierScores() {
+  const carriers = {};
+  allShipments.forEach(s => {
+    const c = s.carrier || 'Unknown';
+    if (!carriers[c]) carriers[c] = { total: 0, ok: 0 };
+    carriers[c].total++;
+    if (s.status !== 'failure' && s.status !== 'return_to_sender') carriers[c].ok++;
+  });
+  const sorted = Object.entries(carriers).sort((a, b) => b[1].total - a[1].total).slice(0, 5);
+  if (sorted.length === 0) { document.getElementById('intelCarrier').innerHTML = '<div class="icard-sub">No carriers</div>'; return; }
+  document.getElementById('intelCarrier').innerHTML = sorted.map(([name, d]) => {
+    const score = Math.round((d.ok / d.total) * 100);
+    const color = score >= 85 ? 'var(--green)' : score >= 70 ? 'var(--amber)' : 'var(--red)';
+    return `<div class="icard-row"><span style="font-size:0.5rem;min-width:50px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name.slice(0,12)}</span><div class="icard-bar"><div class="icard-bar-fill" style="width:${score}%;background:${color}"></div></div><span class="icard-score" style="color:${color}">${score}</span></div>`;
   }).join('');
 }
 
-function renderBriefingStats() {
-  const total = allShipments.length;
-  const transit = allShipments.filter(s => s.status === 'in_transit' || s.status === 'out_for_delivery').length;
-  const delivered = allShipments.filter(s => s.status === 'delivered').length;
-  const exceptions = allShipments.filter(s => s.status === 'failure' || s.status === 'return_to_sender').length;
-  const pending = allShipments.filter(s => s.status === 'pre_transit').length;
-
-  document.getElementById('briefingStats').innerHTML = `
-    <div class="bstat"><span class="bstat-val" style="color:var(--text);">${total}</span><span class="bstat-label">Total</span></div>
-    <div class="bstat"><span class="bstat-val" style="color:var(--blue);">${transit}</span><span class="bstat-label">In Transit</span></div>
-    <div class="bstat"><span class="bstat-val" style="color:var(--amber);">${pending}</span><span class="bstat-label">Pending</span></div>
-    <div class="bstat"><span class="bstat-val" style="color:var(--green);">${delivered}</span><span class="bstat-label">Delivered</span></div>
-    <div class="bstat"><span class="bstat-val" style="color:var(--red);">${exceptions}</span><span class="bstat-label">Exceptions</span></div>
-  `;
+function renderExceptionPatterns() {
+  const locations = {};
+  allShipments.filter(s => s.status === 'failure' || s.status === 'return_to_sender').forEach(s => {
+    const cps = s.checkpoints || [];
+    const last = cps[cps.length - 1];
+    const loc = last?.tracking_location;
+    const key = loc ? [loc.city, loc.state].filter(Boolean).join(', ') : 'Unknown';
+    locations[key] = (locations[key] || 0) + 1;
+  });
+  const sorted = Object.entries(locations).sort((a, b) => b[1] - a[1]).slice(0, 4);
+  if (sorted.length === 0) { document.getElementById('intelExceptions').innerHTML = '<div class="icard-sub">No exceptions</div>'; return; }
+  document.getElementById('intelExceptions').innerHTML = sorted.map(([loc, count]) =>
+    `<div class="icard-list-item"><span style="color:var(--muted)">${loc}</span><span class="icard-list-count">${count}</span></div>`
+  ).join('');
 }
 
+function renderCostCard() {
+  const withCost = allShipments.filter(s => s.total_cost && s.estimated_miles && s.estimated_miles > 0);
+  if (withCost.length === 0) { document.getElementById('intelCost').innerHTML = '<div class="icard-big" style="color:var(--purple)">—</div><div class="icard-sub">Awaiting cost data</div>'; return; }
+  const avg = (withCost.reduce((a, s) => a + s.total_cost / s.estimated_miles, 0) / withCost.length).toFixed(2);
+  const totalCost = withCost.reduce((a, s) => a + s.total_cost, 0);
+  document.getElementById('intelCost').innerHTML = `<div class="icard-big" style="color:var(--purple)">$${avg}</div><div class="icard-sub">${withCost.length} orders · $${Math.round(totalCost).toLocaleString()} total</div>`;
+}
+
+function renderVelocity() {
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    const count = allShipments.filter(s => s.created_at && s.created_at.slice(0, 10) === key).length;
+    days.push({ key, count, isToday: i === 0 });
+  }
+  const max = Math.max(...days.map(d => d.count), 1);
+  document.getElementById('intelVelocity').innerHTML = days.map(d =>
+    `<div style="height:${Math.max((d.count / max) * 100, 4)}%" class="${d.isToday ? 'today' : ''}" title="${d.key}: ${d.count}"></div>`
+  ).join('');
+}
+
+function renderDelayRisk() {
+  const atRisk = allShipments.filter(s => {
+    if (s.status !== 'in_transit' && s.status !== 'out_for_delivery') return false;
+    if (!s.est_delivery) return false;
+    return new Date(s.est_delivery) < new Date();
+  });
+  if (atRisk.length === 0) { document.getElementById('intelDelay').innerHTML = '<div class="icard-sub" style="color:var(--green)">All shipments on schedule</div>'; return; }
+  document.getElementById('intelDelay').innerHTML = `<div style="font-size:0.55rem;color:var(--red);font-weight:700;margin-bottom:0.2rem">${atRisk.length} at risk</div>` +
+    atRisk.slice(0, 4).map(s => `<div class="icard-risk-item"><span style="font-family:monospace;color:var(--muted)">${(s.tracking_code || '').slice(0, 14)}</span><span style="color:var(--red)">${s.carrier || '?'}</span></div>`).join('');
+}
+
+// ── ORDER LIST ──
 function setFilter(f, btn) {
   currentFilter = f;
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.ofilt').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  renderTable();
+  renderOrderList();
 }
 
-function filterAll() { renderTable(); }
-
-function timeSince(date) {
-  const s = Math.floor((Date.now() - date.getTime()) / 1000);
-  if (s < 60) return s + 's ago';
-  if (s < 3600) return Math.floor(s / 60) + 'm ago';
-  if (s < 86400) return Math.floor(s / 3600) + 'h ago';
-  return Math.floor(s / 86400) + 'd ago';
+function sortBy(key) {
+  if (currentSort.key === key) currentSort.asc = !currentSort.asc;
+  else { currentSort.key = key; currentSort.asc = true; }
+  renderOrderList();
 }
 
-// ── ADD TRACKING ──
-async function addTrack(code) {
-  code = (code || '').trim();
-  if (!code) return;
-  document.getElementById('globalSearch').value = '';
+function renderOrderList() {
+  const search = (document.getElementById('orderSearch').value || '').toLowerCase();
+  let filtered = allShipments;
+
+  if (currentFilter !== 'all') {
+    if (currentFilter === 'failure') filtered = filtered.filter(s => s.status === 'failure' || s.status === 'return_to_sender');
+    else filtered = filtered.filter(s => s.status === currentFilter);
+  }
+  if (search) {
+    filtered = filtered.filter(s =>
+      (s.tracking_code || '').toLowerCase().includes(search) ||
+      (s.carrier || '').toLowerCase().includes(search) ||
+      (s.client_name || '').toLowerCase().includes(search) ||
+      (s.cargo_category || '').toLowerCase().includes(search)
+    );
+  }
+
+  const key = currentSort.key;
+  filtered.sort((a, b) => {
+    const av = a[key] || '', bv = b[key] || '';
+    const cmp = typeof av === 'string' ? av.localeCompare(bv) : av - bv;
+    return currentSort.asc ? cmp : -cmp;
+  });
+
+  const list = document.getElementById('orderList');
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="detail-empty">No shipments match your filter</div>';
+    return;
+  }
+
+  list.innerHTML = filtered.map(s => {
+    const cps = s.checkpoints || [];
+    const lastCp = cps[cps.length - 1];
+    const lastMsg = lastCp?.message || s.status || '';
+    const lastLoc = lastCp?.tracking_location;
+    const origin = lastLoc && cps[0]?.tracking_location ? shortCity(cps[0].tracking_location.city) : '—';
+    const dest = lastLoc ? shortCity(lastLoc.city) : '—';
+    const dotColor = STATUS_COLORS[s.status] || 'var(--dim)';
+    const cargo = CARGO_MAP[s.cargo_category] || CARGO_MAP.general;
+    const eta = s.est_delivery ? new Date(s.est_delivery).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—';
+    const etaPast = s.est_delivery && new Date(s.est_delivery) < new Date() && s.status !== 'delivered';
+    const age = s.created_at ? timeSince(s.created_at) : '—';
+    const sel = s.id === selectedId ? ' selected' : '';
+
+    return `<div class="orow${sel}" onclick="selectShipment('${s.id}')">
+      <div class="orow-dot" style="background:${dotColor}"></div>
+      <div class="orow-id">${s.tracking_code || s.id?.slice(0,10) || '—'}</div>
+      <div><span class="orow-tag" style="color:${cargo.color};background:${cargo.bg}">${cargo.label}</span></div>
+      <div class="orow-carrier">${s.carrier || '—'}</div>
+      <div class="orow-route">${origin} → ${dest}</div>
+      <div class="orow-eta" style="${etaPast ? 'color:var(--red)' : ''}">${eta}</div>
+      <div><span class="orow-tag" style="color:${dotColor};background:${dotColor}22">${(STATUS_LABELS[s.status] || s.status || '').slice(0,10)}</span></div>
+      <div class="orow-event">${lastMsg.slice(0, 28)}</div>
+      <div class="orow-age">${age}</div>
+      <div class="orow-chain">${s.last_anchor_tx ? `<a href="https://sepolia.basescan.org/tx/${s.last_anchor_tx}" target="_blank" onclick="event.stopPropagation()">⬡</a>` : '<span style="color:var(--dim)">—</span>'}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── DETAIL PANEL ──
+function selectShipment(id) {
+  selectedId = id;
+  const s = allShipments.find(x => x.id === id);
+  renderOrderList();
+  if (s) renderDetail(s);
+}
+
+function switchDetail(mode, btn) {
+  detailMode = mode;
+  document.querySelectorAll('.dtab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const s = allShipments.find(x => x.id === selectedId);
+  if (s) renderDetail(s);
+}
+
+function renderDetail(s) {
+  if (!s) return;
+  const body = document.getElementById('detailBody');
+
+  if (detailMode === 'map') {
+    body.innerHTML = '<div id="detailMap"></div>';
+    setTimeout(() => {
+      if (detailMap) detailMap.remove();
+      detailMap = L.map('detailMap', { zoomControl: false }).setView([38, -98], 4);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(detailMap);
+      const cps = s.checkpoints || [];
+      cps.forEach(cp => {
+        const loc = cp.tracking_location;
+        if (loc?.city) {
+          L.circleMarker([loc.latitude || 38, loc.longitude || -98], { radius: 5, color: STATUS_COLORS[s.status] || '#f59e0b', fillOpacity: 0.8, weight: 1 })
+            .addTo(detailMap).bindTooltip(`${loc.city}, ${loc.state || ''}`);
+        }
+      });
+      detailMap.invalidateSize();
+    }, 100);
+    return;
+  }
+
+  if (detailMode === 'cortex') {
+    body.innerHTML = '<div class="cortex-box"><div class="cortex-box-label">CORTEX Analysis</div><div class="cortex-box-text" id="cortexInsight">Analyzing shipment...</div></div>';
+    fetchCortexInsight(s);
+    return;
+  }
+
+  const cargo = CARGO_MAP[s.cargo_category] || CARGO_MAP.general;
+  const cps = s.checkpoints || [];
+  const dotColor = STATUS_COLORS[s.status] || 'var(--dim)';
+
+  let html = `
+    <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.5rem">
+      <span class="orow-tag" style="color:${dotColor};background:${dotColor}22;font-size:0.45rem">${STATUS_LABELS[s.status] || s.status}</span>
+      <span class="orow-tag" style="color:${cargo.color};background:${cargo.bg};font-size:0.45rem">${cargo.label}</span>
+    </div>
+    <div style="font-family:monospace;font-size:0.6rem;color:var(--muted);margin-bottom:0.5rem;word-break:break-all">${s.tracking_code || s.id || ''}</div>
+    <div class="dfield"><span class="dfield-key">Carrier</span><span class="dfield-val">${s.carrier || '—'}</span></div>
+    <div class="dfield"><span class="dfield-key">Client</span><span class="dfield-val">${s.client_name || '—'}</span></div>
+    <div class="dfield"><span class="dfield-key">ETA</span><span class="dfield-val">${s.est_delivery || '—'}</span></div>`;
+
+  if (s.total_cost) html += `<div class="dfield"><span class="dfield-key">Cost</span><span class="dfield-val">$${Number(s.total_cost).toLocaleString()}</span></div>`;
+  if (s.estimated_miles) html += `<div class="dfield"><span class="dfield-key">Distance</span><span class="dfield-val">${Number(s.estimated_miles).toLocaleString()} mi</span></div>`;
+  if (s.total_cost && s.estimated_miles) html += `<div class="dfield"><span class="dfield-key">$/Mile</span><span class="dfield-val" style="color:var(--purple)">$${(s.total_cost / s.estimated_miles).toFixed(2)}</span></div>`;
+  if (s.weight_lbs) html += `<div class="dfield"><span class="dfield-key">Weight</span><span class="dfield-val">${Number(s.weight_lbs).toLocaleString()} lbs</span></div>`;
+
+  html += `<div class="ddivider"></div><div class="dsection">Checkpoints (${cps.length})</div>`;
+
+  if (cps.length === 0) {
+    html += '<div style="font-size:0.5rem;color:var(--dim)">No checkpoints yet</div>';
+  } else {
+    html += cps.slice().reverse().slice(0, 10).map(cp => {
+      const loc = cp.tracking_location;
+      const locStr = loc ? [loc.city, loc.state].filter(Boolean).join(', ') : '';
+      const time = cp.datetime ? new Date(cp.datetime).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+      return `<div class="dcp">
+        <div style="display:flex;justify-content:space-between"><span class="dcp-type" style="color:${dotColor}">${cp.status || cp.message || 'Update'}</span><span class="dcp-time">${time}</span></div>
+        ${cp.message ? `<div class="dcp-msg">${cp.message}</div>` : ''}
+        ${locStr ? `<div class="dcp-loc">${locStr}</div>` : ''}
+      </div>`;
+    }).join('');
+  }
+
+  if (s.last_anchor_tx) {
+    html += `<div class="ddivider"></div><div class="dsection">On-Chain</div>
+      <div class="dcp-tx"><a href="https://sepolia.basescan.org/tx/${s.last_anchor_tx}" target="_blank" style="color:var(--blue);font-size:0.5rem;text-decoration:none;font-family:monospace">${s.last_anchor_tx.slice(0,20)}...${s.last_anchor_tx.slice(-6)}</a></div>`;
+  }
+
+  body.innerHTML = html;
+}
+
+async function fetchCortexInsight(s) {
+  try {
+    const cps = s.checkpoints || [];
+    const last3 = cps.slice(-3).map(c => c.message || c.status).join('; ');
+    const msg = `Analyze this shipment in 2 sentences. Flag any risk. Tracking: ${s.tracking_code}, Carrier: ${s.carrier}, Status: ${s.status}, Cargo: ${s.cargo_category || 'general'}, Checkpoints: ${last3 || 'none'}, ETA: ${s.est_delivery || 'unknown'}`;
+    const res = await fetch(SB_CORTEX, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg }) });
+    const data = await res.json();
+    const el = document.getElementById('cortexInsight');
+    if (el) el.textContent = data.response || 'No analysis available.';
+  } catch {
+    const el = document.getElementById('cortexInsight');
+    if (el) el.textContent = 'Analysis unavailable.';
+  }
+}
+
+// ── CORTEX BRIEFING (KPI alert) ──
+async function loadBriefing() {
+  const total = allShipments.length;
+  const transit = allShipments.filter(s => s.status === 'in_transit').length;
+  const exceptions = allShipments.filter(s => s.status === 'failure').length;
+  try {
+    const msg = `In one sentence (15 words max): briefing for ${total} shipments, ${transit} in transit, ${exceptions} exceptions. Be direct.`;
+    const res = await fetch(SB_CORTEX, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg }) });
+    const data = await res.json();
+    document.getElementById('kAlert').textContent = data.response || `${total} shipments tracked. ${exceptions} need attention.`;
+  } catch {
+    document.getElementById('kAlert').textContent = `${total} shipments tracked. ${exceptions} exceptions.`;
+  }
+}
+
+function openCortexDrawer() {
+  selectedId = null;
+  detailMode = 'cortex';
+  document.querySelectorAll('.dtab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.dtab')[2].classList.add('active');
+  const body = document.getElementById('detailBody');
+  body.innerHTML = '<div class="cortex-box"><div class="cortex-box-label">CORTEX Fleet Briefing</div><div class="cortex-box-text" id="cortexInsight">Generating full briefing...</div></div>';
+  fetchFleetBriefing();
+}
+
+async function fetchFleetBriefing() {
+  const total = allShipments.length;
+  const transit = allShipments.filter(s => s.status === 'in_transit').length;
+  const exceptions = allShipments.filter(s => s.status === 'failure').length;
+  const exDetails = allShipments.filter(s => s.status === 'failure').map(s => `${s.carrier} ${s.tracking_code}: ${(s.checkpoints||[]).slice(-1)[0]?.message||s.status}`).join('; ');
+  try {
+    const msg = `Full operations briefing. ${total} shipments: ${transit} transit, ${exceptions} exceptions. ${exDetails ? 'Exceptions: ' + exDetails : 'No exceptions.'} Give me 4 sentences. Infrastructure supply chain context. Be direct.`;
+    const res = await fetch(SB_CORTEX, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg }) });
+    const data = await res.json();
+    const el = document.getElementById('cortexInsight');
+    if (el) el.textContent = data.response || 'No briefing available.';
+  } catch {
+    const el = document.getElementById('cortexInsight');
+    if (el) el.textContent = 'Briefing unavailable.';
+  }
+}
+
+// ── FEED ──
+function renderFeed() {
+  const feed = document.getElementById('feedStrip');
+  const events = [];
+  allShipments.forEach(s => {
+    (s.checkpoints || []).forEach(cp => {
+      events.push({ shipment: s, cp, time: new Date(cp.datetime || cp.created_at || 0).getTime() });
+    });
+  });
+  events.sort((a, b) => b.time - a.time);
+  const top = events.slice(0, 25);
+
+  const existingLabel = feed.querySelector('.feed-label');
+  feed.innerHTML = '';
+  if (existingLabel) feed.appendChild(existingLabel);
+  else { const lbl = document.createElement('div'); lbl.className = 'feed-label'; lbl.textContent = 'Live Feed'; feed.appendChild(lbl); }
+
+  top.forEach(ev => {
+    const card = document.createElement('div');
+    const isException = ev.shipment.status === 'failure';
+    card.className = 'feed-card' + (isException ? ' exception' : '');
+    const route = (ev.shipment.carrier || '?') + ' · ' + (ev.shipment.tracking_code || '').slice(0, 10);
+    card.innerHTML = `<div class="feed-type">${ev.cp.status || ev.cp.message || 'Update'}</div><div class="feed-route">${route}</div>`;
+    card.onclick = () => selectShipment(ev.shipment.id);
+    feed.appendChild(card);
+  });
+}
+
+// ── NEW ORDER MODAL ──
+function openNewOrder() {
+  document.getElementById('orderModal').classList.add('open');
+  document.getElementById('mTrack').focus();
+}
+
+function closeModal() {
+  document.getElementById('orderModal').classList.remove('open');
+}
+
+async function submitOrder() {
+  const code = document.getElementById('mTrack').value.trim();
+  if (!code) { document.getElementById('mTrack').style.borderColor = 'var(--red)'; return; }
+
+  const btn = document.getElementById('mSubmit');
+  btn.disabled = true; btn.textContent = 'Creating...';
 
   try {
     const res = await fetch(SB_TRACK, {
@@ -334,58 +737,58 @@ async function addTrack(code) {
       body: JSON.stringify({ trackingCode: code }),
     });
     const data = await res.json();
-    if (data.success) {
-      loadShipments();
-    } else {
-      alert('Error: ' + (data.error || 'Unknown'));
+
+    if (data.success && data.id) {
+      const meta = {};
+      const cargo = document.getElementById('mCargo').value;
+      const client = document.getElementById('mClient').value.trim();
+      const weight = document.getElementById('mWeight').value;
+      const miles = document.getElementById('mMiles').value;
+      const cost = document.getElementById('mCost').value;
+      const notes = document.getElementById('mNotes').value.trim();
+
+      if (cargo) meta.cargo_category = cargo;
+      if (client) meta.client_name = client;
+      if (weight) meta.weight_lbs = Number(weight);
+      if (miles) meta.estimated_miles = Number(miles);
+      if (cost) meta.total_cost = Number(cost);
+      if (notes) meta.notes = notes;
+
+      if (Object.keys(meta).length > 0) {
+        await fetch(`${SB_URL}/rest/v1/logistix_tracked?id=eq.${data.id}`, {
+          method: 'PATCH',
+          headers: { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+          body: JSON.stringify(meta),
+        });
+      }
     }
-  } catch (e) { alert('Error: ' + e.message); }
-}
 
-// ── PLACEHOLDER ACTIONS ──
-function notifyClient(code) { alert('Client notification for ' + code + ' — email template coming soon'); }
-function reschedule(code) { alert('Reschedule for ' + code + ' — scheduling flow coming soon'); }
-
-// ── CORTEX BRIEFING ──
-async function loadBriefing() {
-  try {
-    const shipCount = allShipments.length;
-    const transit = allShipments.filter(s => s.status === 'in_transit' || s.status === 'out_for_delivery').length;
-    const exceptions = allShipments.filter(s => s.status === 'failure' || s.status === 'return_to_sender').length;
-    const delivered = allShipments.filter(s => s.status === 'delivered').length;
-    const pending = allShipments.filter(s => s.status === 'pre_transit').length;
-
-    const exceptionDetails = allShipments
-      .filter(s => s.status === 'failure' || s.status === 'return_to_sender')
-      .map(s => `${s.carrier} ${s.tracking_code}: ${(s.checkpoints || []).slice(-1)[0]?.message || s.status}`)
-      .join('; ');
-
-    const msg = `Give me a morning operations briefing. I have ${shipCount} total shipments: ${transit} in transit, ${pending} pending pickup, ${delivered} delivered, ${exceptions} exceptions. ${exceptionDetails ? 'Exceptions: ' + exceptionDetails : 'No exceptions.'} Keep it under 4 sentences. Be direct.`;
-
-    const res = await fetch(SB_CORTEX, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: msg }),
-    });
-    const data = await res.json();
-    document.getElementById('briefingText').innerHTML = data.response || 'No briefing available.';
+    closeModal();
+    loadShipments();
+    document.querySelectorAll('.modal-input').forEach(i => { i.value = ''; });
   } catch (e) {
-    document.getElementById('briefingText').innerHTML = `<strong>${allShipments.length} shipments tracked.</strong> ${allShipments.filter(s => s.status === 'failure').length} exceptions need attention.`;
+    alert('Error: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Create Order';
   }
 }
 
-// ── VOICE (reuse token endpoint) ──
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('orderModal').classList.contains('open')) closeModal();
+});
+
+// ── VOICE (Rex) ──
 let voiceWs = null, voiceActive = false, voiceCtx = null, voiceMic = null, voiceProc = null, voiceQueue = [], voicePlaying = false;
 
 async function toggleVoice() {
   if (voiceActive) { stopVoice(); return; }
   const btn = document.getElementById('voiceBtn');
-  btn.style.borderColor = 'var(--muted)'; btn.style.color = 'var(--muted)';
+  btn.classList.add('active');
 
   try {
     const tRes = await fetch(VOICE_TOKEN, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
     const tData = await tRes.json();
-    if (!tData.token) return;
+    if (!tData.token) { btn.classList.remove('active'); return; }
 
     voiceMic = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 24000, channelCount: 1 } });
     voiceCtx = new AudioContext({ sampleRate: 24000 });
@@ -393,14 +796,10 @@ async function toggleVoice() {
 
     voiceWs.onopen = () => {
       voiceActive = true;
-      btn.style.borderColor = 'var(--red)'; btn.style.color = 'var(--red)';
-      btn.style.animation = 'pulse 1.5s infinite';
-
-      const shipSummary = allShipments.slice(0, 10).map(s => `${s.carrier} ${s.tracking_code}: ${s.status}`).join('; ');
-
+      const shipSummary = allShipments.slice(0, 15).map(s => `${s.carrier} ${s.tracking_code}: ${s.status} [${s.cargo_category || 'general'}]`).join('; ');
       voiceWs.send(JSON.stringify({ type: 'session.update', session: {
         voice: 'rex',
-        instructions: `You are Rex, the CORTEX operations voice agent for a warehouse. The operator is on the floor — be brief and actionable. Current shipments: ${shipSummary || 'none loaded'}. Answer questions about shipment status, ETAs, exceptions. If they ask to track a new number, confirm it.`,
+        instructions: `You are Rex, the CORTEX operations voice agent for an infrastructure supply chain HQ. The operator manages shipments of structural steel, electrical transformers, heavy equipment, pipe fittings, HVAC systems, and concrete for major construction projects. Be brief and actionable. Current shipments: ${shipSummary || 'none loaded'}. Answer questions about status, ETAs, exceptions, carrier performance. If they ask to track something new, confirm it.`,
         turn_detection: { type: 'server_vad', threshold: 0.8, silence_duration_ms: 800 },
         audio: { input: { format: { type: 'audio/pcm', rate: 24000 } }, output: { format: { type: 'audio/pcm', rate: 24000 } } },
       }}));
@@ -422,13 +821,12 @@ async function toggleVoice() {
       if (ev.type === 'response.output_audio.delta' && ev.delta) playChunk(ev.delta);
     };
     voiceWs.onclose = () => { if (voiceActive) stopVoice(); };
-  } catch (e) { console.error(e); }
+  } catch (e) { console.error(e); btn.classList.remove('active'); }
 }
 
 function stopVoice() {
   voiceActive = false;
-  const btn = document.getElementById('voiceBtn');
-  btn.style.borderColor = 'var(--amber)'; btn.style.color = 'var(--amber)'; btn.style.animation = '';
+  document.getElementById('voiceBtn').classList.remove('active');
   if (voiceProc) voiceProc.disconnect();
   if (voiceMic) voiceMic.getTracks().forEach(t => t.stop());
   if (voiceCtx) voiceCtx.close();
@@ -452,7 +850,7 @@ async function drainQ() {
 
 // ── INIT ──
 loadShipments();
-setTimeout(loadBriefing, 1500);
+setTimeout(loadBriefing, 2000);
 setInterval(loadShipments, 30000);
 </script>
 </body>
