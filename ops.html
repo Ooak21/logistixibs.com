@@ -264,111 +264,36 @@ const CP_TYPES = {
 
 function getCpType(eventType) { return CP_TYPES[eventType] || { label: 'CHECKPOINT', desc: 'Unknown checkpoint type', icon: '?', color: '#71717a', cls: 'purple' }; }
 
-// ── SHIPMENT DEFINITIONS (Infrastructure Supply Chain) ──
-const SHIPMENTS = [
-  { id: null, origin: { lat: 29.76, lon: -95.37, name: 'Houston, TX' }, dest: { lat: 31.23, lon: 121.47, name: 'Shanghai, China' }, cargo: 'Structural Steel (I-Beams)', mode: 'air', carrier: 'Atlas Air 747-8F', weight: '42,000 lbs', progress: 0.15, speed: 0.002, checkpoints_def: [{ at: 0.3, type: 11, name: 'LAX Customs' }, { at: 0.7, type: 13, name: 'NRT Airport' }] },
-  { id: null, origin: { lat: 25.76, lon: -80.19, name: 'Miami, FL' }, dest: { lat: 50.11, lon: 8.68, name: 'Frankfurt, Germany' }, cargo: 'Electrical Transformers', mode: 'air', carrier: 'Cargolux 747-8F', weight: '28,500 lbs', progress: 0.35, speed: 0.0018, checkpoints_def: [{ at: 0.5, type: 11, name: 'JFK Customs' }, { at: 0.8, type: 13, name: 'FRA Airport' }] },
-  { id: null, origin: { lat: 32.78, lon: -96.80, name: 'Dallas, TX' }, dest: { lat: 25.20, lon: 55.27, name: 'Dubai, UAE' }, cargo: 'Heavy Equipment (Crane Parts)', mode: 'air', carrier: 'Emirates SkyCargo 777F', weight: '65,200 lbs', progress: 0.6, speed: 0.0015, checkpoints_def: [{ at: 0.25, type: 7, name: 'I-20 Weigh Station' }, { at: 0.55, type: 11, name: 'JFK Customs' }] },
-  { id: null, origin: { lat: 33.74, lon: -118.26, name: 'Long Beach, CA' }, dest: { lat: -23.55, lon: -46.63, name: 'Santos, Brazil' }, cargo: 'Pipe Fittings (16" Valve Assemblies)', mode: 'sea', carrier: 'MSC Container Vessel', weight: '120,000 lbs', progress: 0.25, speed: 0.0008, checkpoints_def: [{ at: 0.15, type: 12, name: 'Long Beach Port' }, { at: 0.6, type: 17, name: 'Panama Canal Transit' }] },
-  { id: null, origin: { lat: 34.05, lon: -118.24, name: 'Los Angeles, CA' }, dest: { lat: 36.17, lon: -115.14, name: 'Las Vegas, NV' }, cargo: 'HVAC Units (Rooftop Package)', mode: 'truck', carrier: 'XPO Logistics Flatbed', weight: '18,400 lbs', progress: 0.1, speed: 0.004, checkpoints_def: [{ at: 0.35, type: 7, name: 'Barstow Weigh Station' }, { at: 0.65, type: 9, name: 'Baker Fuel Stop' }] },
-  { id: null, origin: { lat: 41.88, lon: -87.63, name: 'Chicago, IL' }, dest: { lat: 40.71, lon: -74.01, name: 'New York, NY' }, cargo: 'Concrete Precast Panels', mode: 'truck', carrier: 'Schneider National OD', weight: '44,000 lbs', progress: 0.45, speed: 0.003, checkpoints_def: [{ at: 0.3, type: 7, name: 'I-80 Weigh Station OH' }, { at: 0.7, type: 8, name: 'PA Turnpike Rest Area' }] },
-];
-
-// Generate shipment IDs + init
+// ── COLOR CONSTANTS ──
 const modeColors = { air: 'rgba(96,165,250,0.35)', sea: 'rgba(56,189,248,0.3)', truck: 'rgba(245,158,11,0.3)' };
 const modeDash = { air: '10 8', sea: '6 10', truck: '8 6' };
 const dotColors = { air: '#60a5fa', sea: '#38bdf8', truck: '#f59e0b' };
 
-SHIPMENTS.forEach(s => {
-  const arr = new Uint8Array(32);
-  crypto.getRandomValues(arr);
-  s.id = '0x' + Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
-  s.checkpoints = [];
-  s.cpFired = {};
-  s.delivered = false;
-  s.routePts = gcArc(s.origin.lat, s.origin.lon, s.dest.lat, s.dest.lon, 80);
-  s.marker = null;
-  s.routeLine = null;
-  s.cpMarkers = [];
-});
-
-// ── DRAW ROUTES + ICONS ──
-SHIPMENTS.forEach(s => {
-  const color = dotColors[s.mode];
-
-  s.routeLine = L.polyline(s.routePts, { color: modeColors[s.mode], weight: 2, dashArray: modeDash[s.mode] }).addTo(map);
-
-  // Origin marker
-  L.circleMarker([s.origin.lat, s.origin.lon], { radius: 5, color: '#f59e0b', fillColor: '#f59e0b', fillOpacity: 0.7, weight: 1 }).addTo(map)
-    .bindPopup(`<div class="cp-popup"><div class="cp-popup-type" style="color:#f59e0b">ORIGIN</div><div class="cp-popup-desc">${s.origin.name}</div><div class="cp-popup-carrier">${s.carrier} · ${s.cargo}</div></div>`);
-
-  // Destination marker
-  L.circleMarker([s.dest.lat, s.dest.lon], { radius: 5, color: '#34d399', fillColor: '#34d399', fillOpacity: 0.7, weight: 1 }).addTo(map)
-    .bindPopup(`<div class="cp-popup"><div class="cp-popup-type" style="color:#34d399">DESTINATION</div><div class="cp-popup-desc">${s.dest.name}</div><div class="cp-popup-carrier">${s.carrier} · ${s.cargo}</div></div>`);
-
-  // Checkpoint markers (clickable, labeled by type)
-  (s.checkpoints_def || []).forEach((cpDef, i) => {
-    const cpIdx = Math.floor(cpDef.at * s.routePts.length);
-    const cpPt = s.routePts[cpIdx];
-    const cpInfo = getCpType(cpDef.type);
-    const cpMarker = L.marker(cpPt, { icon: L.divIcon({
-      className: '',
-      html: `<div style="display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:4px;background:${cpInfo.color}22;border:1.5px solid ${cpInfo.color}66;color:${cpInfo.color};font-size:9px;font-weight:800;font-family:Inter,sans-serif;cursor:pointer;box-shadow:0 0 8px ${cpInfo.color}33;">${cpInfo.icon}</div>`,
-      iconSize: [22, 22], iconAnchor: [11, 11],
-    })}).addTo(map);
-    cpMarker.bindPopup(`<div class="cp-popup"><div class="cp-popup-type" style="color:${cpInfo.color}">${cpInfo.label}</div><div class="cp-popup-desc">${cpInfo.desc}</div><div class="cp-popup-carrier">${cpDef.name || ''} · ${s.carrier}</div></div>`);
-    s.cpMarkers.push(cpMarker);
-  });
-
-  // Moving vehicle icon
-  const startIdx = Math.floor(s.progress * s.routePts.length);
-  const startPt = s.routePts[Math.min(startIdx, s.routePts.length - 1)];
-  s.marker = L.marker(startPt, { icon: vehicleIcon(s.mode, color, 0), zIndexOffset: 1000 }).addTo(map);
-  s.marker.on('click', () => openSidebar(s));
-
-  // Carrier label beneath vehicle
-  s.label = L.marker(startPt, { icon: L.divIcon({
-    className: '',
-    html: `<div style="font-size:10px;color:${color};font-family:Inter,sans-serif;font-weight:600;white-space:nowrap;text-shadow:0 1px 4px rgba(0,0,0,0.9),0 0 8px rgba(0,0,0,0.7);text-align:center;pointer-events:none;">${s.carrier.split(' ')[0]}<br><span style="font-size:8px;font-weight:400;opacity:0.6">${s.cargo.split('(')[0].trim().slice(0,18)}</span></div>`,
-    iconSize: [120, 28], iconAnchor: [60, -14],
-  })}).addTo(map);
-});
-
-// ── UPDATE STATS ──
+// ── STATS (driven by real data from flight-tracker.js + EasyPost) ──
 function updateStats() {
-  const active = SHIPMENTS.filter(s => !s.delivered);
-  document.getElementById('osActive').textContent = active.length;
-  document.getElementById('osAir').textContent = active.filter(s => s.mode === 'air').length;
-  document.getElementById('osTruck').textContent = active.filter(s => s.mode === 'truck').length;
-  document.getElementById('osSea').textContent = active.filter(s => s.mode === 'sea').length;
-  document.getElementById('osDelivered').textContent = SHIPMENTS.filter(s => s.delivered).length;
+  const liveFlights = (typeof activeFlights !== 'undefined') ? activeFlights.filter(f => f.status !== 'completed') : [];
+  const completedFlights = (typeof activeFlights !== 'undefined') ? activeFlights.filter(f => f.status === 'completed') : [];
+  document.getElementById('osActive').textContent = liveFlights.length + trackedShipments.filter(t => t.status !== 'delivered').length;
+  document.getElementById('osAir').textContent = liveFlights.length;
+  document.getElementById('osTruck').textContent = trackedShipments.filter(t => t.carrier && t.carrier.match(/usps|ups|fedex/i)).length;
+  document.getElementById('osSea').textContent = 0;
+  document.getElementById('osDelivered').textContent = completedFlights.length + trackedShipments.filter(t => t.status === 'delivered').length;
 }
-updateStats();
 
-// ── SIDEBAR ──
+// ── SIDEBAR (for EasyPost tracked shipments) ──
 function openSidebar(s) {
   const sb = document.getElementById('opsSidebar');
   const color = dotColors[s.mode] || '#f59e0b';
   const modeLabel = { air: 'Air Freight', sea: 'Ocean Freight', truck: 'Ground', carrier: 'Carrier' }[s.mode] || s.mode;
-  const status = s.delivered ? 'DELIVERED' : s.progress > 0.5 ? 'EN ROUTE (PAST MIDPOINT)' : 'EN ROUTE';
   const statusColor = s.delivered ? '#34d399' : '#60a5fa';
-  const pct = Math.round(s.progress * 100);
 
   let cpHtml = '';
-  if (s.checkpoints.length === 0) {
-    cpHtml = '<div style="font-size:0.55rem;color:rgba(255,255,255,0.2);padding:0.3rem 0;">No checkpoints anchored yet</div>';
+  if (!s.checkpoints || s.checkpoints.length === 0) {
+    cpHtml = '<div style="font-size:0.55rem;color:rgba(255,255,255,0.2);">No checkpoints</div>';
   } else {
     cpHtml = s.checkpoints.slice().reverse().map(cp => {
       const cpInfo = getCpType(cp.type);
-      return `<div class="ops-sid-cp">
-        <div class="ops-sid-cp-icon" style="background:${cpInfo.color}15;color:${cpInfo.color};border:1px solid ${cpInfo.color}33;">${cpInfo.icon}</div>
-        <div class="ops-sid-cp-info">
-          <div class="ops-sid-cp-type ${cpInfo.cls}">${cpInfo.label}</div>
-          <div class="ops-sid-cp-desc">${cpInfo.desc}</div>
-          <div class="ops-sid-cp-detail">${cp.label || ''} · ${new Date(cp.timestamp * 1000).toLocaleString()}</div>
-          ${cp.txHash ? `<div class="ops-sid-cp-tx"><a href="https://sepolia.basescan.org/tx/${cp.txHash}" target="_blank">TX: ${cp.txHash.slice(0, 14)}...${cp.txHash.slice(-6)}</a></div>` : ''}
-        </div>
-      </div>`;
+      return `<div class="ops-sid-cp"><div class="ops-sid-cp-icon" style="background:${cpInfo.color}15;color:${cpInfo.color};border:1px solid ${cpInfo.color}33;">${cpInfo.icon}</div><div class="ops-sid-cp-info"><div class="ops-sid-cp-type ${cpInfo.cls}">${cpInfo.label}</div><div class="ops-sid-cp-detail">${cp.label || ''}</div>${cp.txHash ? `<div class="ops-sid-cp-tx"><a href="https://sepolia.basescan.org/tx/${cp.txHash}" target="_blank">TX: ${cp.txHash.slice(0,14)}...${cp.txHash.slice(-6)}</a></div>` : ''}</div></div>`;
     }).join('');
   }
 
@@ -376,34 +301,24 @@ function openSidebar(s) {
     <div class="ops-sid-hero">
       <div class="ops-sid-hero-top">
         <div class="ops-sid-icon" style="background:${color}15;border:1.5px solid ${color}44;">
-          ${VEHICLE_SVGS[s.mode] ? VEHICLE_SVGS[s.mode].replace(/COLOR/g, color).replace(/width="\d+"/, 'width="24"').replace(/height="\d+"/, 'height="24"') : ''}
+          ${VEHICLE_SVGS[s.mode] ? VEHICLE_SVGS[s.mode].replace(/COLOR/g, color).replace(/width="\d+"/, 'width="24"').replace(/height="\d+"/, 'height="24"') : '<div style="font-size:14px">📦</div>'}
         </div>
         <div class="ops-sid-hero-info">
-          <div class="ops-sid-carrier">${s.carrier}</div>
-          <div class="ops-sid-route-label">${s.origin.name} → ${s.dest.name}</div>
+          <div class="ops-sid-carrier">${s.carrier || 'Unknown'}</div>
+          <div class="ops-sid-route-label">${s.origin?.name || '?'} → ${s.dest?.name || '?'}</div>
         </div>
       </div>
       <div class="ops-sid-tags">
         <span class="ops-sid-tag" style="color:${color};background:${color}18">${modeLabel}</span>
-        <span class="ops-sid-tag" style="color:${statusColor};background:${statusColor}18">${status}</span>
-        ${s.weight ? `<span class="ops-sid-tag" style="color:#a1a1aa;background:rgba(161,161,170,0.12)">${s.weight}</span>` : ''}
-      </div>
-      <div class="ops-sid-progress">
-        <div class="ops-sid-bar"><div class="ops-sid-bar-fill" style="width:${pct}%;background:${color}"></div></div>
-        <div class="ops-sid-bar-labels"><span>${s.origin.name.split(',')[0]}</span><span>${pct}%</span><span>${s.dest.name.split(',')[0]}</span></div>
+        <span class="ops-sid-tag" style="color:${statusColor};background:${statusColor}18">${s.delivered ? 'DELIVERED' : 'IN TRANSIT'}</span>
       </div>
     </div>
     <div class="ops-sid-body">
       <div class="ops-sid-section">Shipment Details</div>
-      <div class="ops-sid-row"><span class="ops-sid-key">Cargo</span><span class="ops-sid-val">${s.cargo}</span></div>
-      <div class="ops-sid-row"><span class="ops-sid-key">Carrier</span><span class="ops-sid-val">${s.carrier}</span></div>
-      <div class="ops-sid-row"><span class="ops-sid-key">Mode</span><span class="ops-sid-val">${modeLabel}</span></div>
-      ${s.weight ? `<div class="ops-sid-row"><span class="ops-sid-key">Weight</span><span class="ops-sid-val">${s.weight}</span></div>` : ''}
-      <div class="ops-sid-row"><span class="ops-sid-key">Progress</span><span class="ops-sid-val" style="color:${color};font-weight:700">${pct}%</span></div>
-      <div class="ops-sid-row"><span class="ops-sid-key">Shipment ID</span><span class="ops-sid-val" style="font-family:monospace;font-size:0.5rem">${s.id.slice(0,10)}...${s.id.slice(-4)}</span></div>
-
+      <div class="ops-sid-row"><span class="ops-sid-key">Cargo</span><span class="ops-sid-val">${s.cargo || '—'}</span></div>
+      <div class="ops-sid-row"><span class="ops-sid-key">Carrier</span><span class="ops-sid-val">${s.carrier || '—'}</span></div>
       <div class="ops-sid-divider"></div>
-      <div class="ops-sid-section">On-Chain Checkpoints (${s.checkpoints.length})</div>
+      <div class="ops-sid-section">Checkpoints</div>
       ${cpHtml}
     </div>
     <div class="ops-sid-footer"><a href="./track.html?id=${encodeURIComponent(s.id)}" target="_blank">View Full Audit Trail →</a></div>
@@ -412,38 +327,6 @@ function openSidebar(s) {
 }
 
 function closeSidebar() { document.getElementById('opsSidebar').classList.remove('open'); }
-
-// ── CHECKPOINT RECORDING ──
-async function fireCheckpoint(s, eventType, label, lat, lon) {
-  try {
-    const res = await fetch(SB_SIM, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        shipmentId: s.id,
-        eventType,
-        location: { lat, lon, name: label },
-        bundle: { shipmentId: s.id, origin: s.origin.name, destination: s.dest.name, cargoType: s.cargo, carrier: s.carrier, event: label, mode: s.mode },
-      }),
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    s.checkpoints.push({ ...data, label, type: eventType, lat, lon });
-    addFeedCard(s, label, data);
-    return data;
-  } catch (e) { console.warn('Checkpoint failed:', e); return null; }
-}
-
-function addFeedCard(s, label, result) {
-  const feed = document.getElementById('opsFeed');
-  const card = document.createElement('div');
-  card.className = 'ops-feed-card new';
-  const shortRoute = s.origin.name.split(',')[0] + '→' + s.dest.name.split(',')[0];
-  card.innerHTML = `<div class="ops-feed-type">${label}</div><div class="ops-feed-route">${shortRoute} · ${s.cargo}</div><div class="ops-feed-tx"><a href="https://sepolia.basescan.org/tx/${result.txHash}" target="_blank">TX: ${result.txHash.slice(0, 10)}...${result.txHash.slice(-6)}</a></div>`;
-  card.onclick = () => openSidebar(s);
-  feed.appendChild(card);
-  feed.scrollLeft = feed.scrollWidth;
-}
 
 // ── OPENSKY LIVE FLIGHTS ──
 let osToken = null, osTokenExp = 0;
@@ -493,50 +376,6 @@ function bearing(lat1, lon1, lat2, lon2) {
   const y = Math.sin(dLon) * Math.cos(toR(lat2));
   const x = Math.cos(toR(lat1)) * Math.sin(toR(lat2)) - Math.sin(toR(lat1)) * Math.cos(toR(lat2)) * Math.cos(dLon);
   return ((Math.atan2(y, x) * 180 / Math.PI) + 360) % 360;
-}
-
-// ── ANIMATION LOOP ──
-let lastTick = performance.now();
-
-function tick(now) {
-  const dt = (now - lastTick) / 1000;
-  lastTick = now;
-
-  SHIPMENTS.forEach(s => {
-    if (s.delivered) return;
-    s.progress += s.speed * dt;
-
-    if (s.progress >= 1) {
-      s.progress = 1;
-      s.delivered = true;
-      fireCheckpoint(s, 5, 'DELIVERED', s.dest.lat, s.dest.lon);
-      updateStats();
-    }
-
-    // Check all defined checkpoints
-    (s.checkpoints_def || []).forEach((cpDef, i) => {
-      if (!s.cpFired[i] && s.progress >= cpDef.at) {
-        s.cpFired[i] = true;
-        const cpIdx = Math.floor(cpDef.at * s.routePts.length);
-        const cpPt = s.routePts[cpIdx];
-        fireCheckpoint(s, cpDef.type, cpDef.name || getCpType(cpDef.type).label, cpPt[0], cpPt[1]);
-      }
-    });
-
-    // Move vehicle
-    const idx = Math.min(Math.floor(s.progress * s.routePts.length), s.routePts.length - 1);
-    const pt = s.routePts[idx];
-    const nextIdx = Math.min(idx + 3, s.routePts.length - 1);
-    const nextPt = s.routePts[nextIdx];
-    const hdg = bearing(pt[0], pt[1], nextPt[0], nextPt[1]);
-
-    const color = dotColors[s.mode];
-    s.marker.setLatLng(pt);
-    s.marker.setIcon(vehicleIcon(s.mode, color, hdg));
-    s.label.setLatLng(pt);
-  });
-
-  requestAnimationFrame(tick);
 }
 
 // ── EASYPOST TRACKED SHIPMENTS ──
@@ -630,28 +469,27 @@ async function loadTrackedShipments() {
   } catch (e) { console.warn('Load tracked failed:', e); }
 }
 
-// ── INIT ──
+// ── INIT (real data only — no simulated shipments) ──
 (async () => {
-  for (const s of SHIPMENTS) {
-    await fireCheckpoint(s, 0, 'CREATED', s.origin.lat, s.origin.lon);
-  }
-  updateStats();
-  requestAnimationFrame(tick);
+  // Load ambient cargo flight overlay (read-only, no transactions)
   loadCargoFlights();
-  loadTrackedShipments();
   setInterval(loadCargoFlights, 300000);
+
+  // Load EasyPost tracked shipments
+  loadTrackedShipments();
   setInterval(loadTrackedShipments, 60000);
 
-  // Restore live-tracked flights after flight-tracker.js loads
+  // Load real-time tracked flights from Supabase + start polling
   const ftScript = document.createElement('script');
   ftScript.src = './flight-tracker.js';
-  ftScript.onload = () => {
-    if (typeof restoreActiveFlights === 'function') restoreActiveFlights();
-    const destSel2 = document.getElementById('destAirport');
-    if (destSel2 && typeof AIRPORTS !== 'undefined') {
-      destSel2.innerHTML = '<option value="">Select destination...</option>' +
+  ftScript.onload = async () => {
+    if (typeof restoreActiveFlights === 'function') await restoreActiveFlights();
+    const destSel = document.getElementById('destAirport');
+    if (destSel && typeof AIRPORTS !== 'undefined') {
+      destSel.innerHTML = '<option value="">Select destination...</option>' +
         Object.entries(AIRPORTS).map(([code, a]) => `<option value="${code}">${a.name}</option>`).join('');
     }
+    updateStats();
   };
   document.body.appendChild(ftScript);
 })();
