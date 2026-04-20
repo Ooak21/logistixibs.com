@@ -358,13 +358,13 @@ function openSidebar(s) {
 function closeSidebar() { document.getElementById('opsSidebar').classList.remove('open'); }
 
 // ── LAS DEPARTURES OVERLAY (via Airlabs proxy) ──
-const PROXY_URL = 'https://logistix-opensky-proxy.vercel.app/api/opensky';
+const LAS_PROXY = 'https://logistix-opensky-proxy.vercel.app/api/opensky';
 
 async function loadCargoFlights() {
   if (!layers.flights) return;
   clearFlightMarkers();
   try {
-    const res = await fetch(`${PROXY_URL}?action=scan&dep_iata=LAS`);
+    const res = await fetch(`${LAS_PROXY}?action=scan&dep_iata=LAS`);
     if (!res.ok) return;
     const d = await res.json();
     if (!d.departures || d.departures.length === 0) return;
