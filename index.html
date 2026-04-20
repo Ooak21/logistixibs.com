@@ -19,8 +19,15 @@
       function inject() {
         var mv = document.querySelector('model-viewer');
         if (!mv) return setTimeout(inject, 200);
-        var section = mv.closest('section') || mv.closest('div');
-        if (!section) return;
+        // Walk up to find the outermost section/container that holds the entire satellite block
+        var section = mv.parentElement;
+        while (section && section.id !== 'root') {
+          // Look for the section-level container — usually has significant height and is a direct child or near-child of a major section
+          if (section.tagName === 'SECTION' || (section.parentElement && section.parentElement.id === 'root')) break;
+          if (section.parentElement && section.parentElement.tagName === 'SECTION') { section = section.parentElement; break; }
+          section = section.parentElement;
+        }
+        if (!section || section.id === 'root') return;
 
         var faqHtml = '<div id="faq-intake" style="max-width:72rem;margin:0 auto;padding:0 1.5rem 5rem;display:grid;grid-template-columns:1fr;gap:2rem;">' +
           '<div style="text-align:center;margin-bottom:1rem;">' +
