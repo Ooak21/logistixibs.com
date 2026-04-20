@@ -19,15 +19,26 @@
       function inject() {
         var mv = document.querySelector('model-viewer');
         if (!mv) return setTimeout(inject, 200);
-        // Walk up to find the outermost section/container that holds the entire satellite block
-        var section = mv.parentElement;
-        while (section && section.id !== 'root') {
-          // Look for the section-level container — usually has significant height and is a direct child or near-child of a major section
-          if (section.tagName === 'SECTION' || (section.parentElement && section.parentElement.id === 'root')) break;
-          if (section.parentElement && section.parentElement.tagName === 'SECTION') { section = section.parentElement; break; }
-          section = section.parentElement;
+        // Hide the model-viewer and its container (the grey box) — don't remove anything
+        var box = mv.parentElement;
+        while (box) {
+          // Find the container that has the grey background / large padding — usually 2-3 levels up
+          var style = window.getComputedStyle(box);
+          var h = box.offsetHeight || 0;
+          if (h > 300 && box.parentElement && box.parentElement.tagName !== 'BODY' && box.id !== 'root') {
+            box.style.display = 'none';
+            break;
+          }
+          if (box.parentElement && (box.parentElement.id === 'root' || box.parentElement.tagName === 'BODY')) break;
+          box = box.parentElement;
         }
-        if (!section || section.id === 'root') return;
+        // Insert FAQ section after the footer's previous sibling (before footer)
+        var footer = document.querySelector('footer');
+        if (!footer) return;
+        var faqDiv = document.createElement('div');
+        faqDiv.id = 'faq-intake-wrapper';
+        footer.parentElement.insertBefore(faqDiv, footer);
+        var section = faqDiv;
 
         var faqHtml = '<div id="faq-intake" style="max-width:72rem;margin:0 auto;padding:0 1.5rem 5rem;display:grid;grid-template-columns:1fr;gap:2rem;">' +
           '<div style="text-align:center;margin-bottom:1rem;">' +
@@ -37,7 +48,7 @@
           '<div style="display:grid;grid-template-columns:1fr;gap:2rem;" id="faqGrid"></div>' +
         '</div>';
 
-        section.outerHTML = faqHtml;
+        section.innerHTML = faqHtml;
 
         var faqs = [
           {q:'What does Logistix track?', a:'Real flights, carrier shipments, and supply chain cargo in real time. We pull live telemetry from aviation APIs and carrier networks, then overlay geofence checkpoints that anchor on the blockchain as permanent, verifiable records.'},
