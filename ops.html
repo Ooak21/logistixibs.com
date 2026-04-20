@@ -11,10 +11,10 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Inter', system-ui, sans-serif; background: #050510; color: #fff; height: 100vh; overflow: hidden; -webkit-font-smoothing: antialiased; }
 
-.shell { position: relative; height: calc(100vh - 44px); }
+.shell { display: grid; grid-template-columns: 1fr; grid-template-rows: 44px 1fr 64px; height: calc(100vh - 44px); }
 
 /* ── HEADER ── */
-.ops-header { position: fixed; top: 44px; left: 0; right: 0; height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 0 1.25rem; background: rgba(8,8,20,0.98); border-bottom: 1px solid rgba(255,255,255,0.06); z-index: 1000; }
+.ops-header { grid-row: 1; display: flex; align-items: center; justify-content: space-between; padding: 0 1.25rem; background: rgba(8,8,20,0.98); border-bottom: 1px solid rgba(255,255,255,0.06); }
 .ops-brand { display: flex; align-items: center; gap: 0.5rem; }
 .ops-brand-icon { width: 1.4rem; height: 1.4rem; border-radius: 3px; }
 .ops-brand-text { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.05em; }
@@ -35,12 +35,12 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #050510; color: 
 .ops-link:hover { color: #fff; }
 
 /* ── MAP ── */
-.ops-map { position: fixed; top: 88px; left: 0; right: 0; bottom: 64px; z-index: 1; }
+.ops-map { grid-row: 2; position: relative; overflow: hidden; }
 #opsMap { width: 100%; height: 100%; background: #050510; }
 .leaflet-container { background: #050510; }
 
 /* ── SIDEBAR ── */
-.ops-sidebar { position: fixed; top: 88px; right: 0; width: 380px; bottom: 64px; background: rgba(8,8,20,0.97); border-left: 1px solid rgba(255,255,255,0.06); z-index: 500; transform: translateX(100%); transition: transform 0.3s; overflow-y: auto; padding: 0; backdrop-filter: blur(12px); }
+.ops-sidebar { position: absolute; top: 0; right: 0; width: 380px; height: 100%; background: rgba(8,8,20,0.97); border-left: 1px solid rgba(255,255,255,0.06); z-index: 500; transform: translateX(100%); transition: transform 0.3s; overflow-y: auto; padding: 0; backdrop-filter: blur(12px); }
 .ops-sidebar.open { transform: translateX(0); }
 .ops-sidebar-close { position: absolute; top: 0.6rem; right: 0.6rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; color: rgba(255,255,255,0.5); font-size: 0.8rem; cursor: pointer; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
 .ops-sidebar-close:hover { color: #fff; background: rgba(255,255,255,0.1); }
@@ -86,7 +86,7 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #050510; color: 
 .cp-popup-carrier { color: rgba(255,255,255,0.35) !important; }
 
 /* ── FEED ── */
-.ops-feed { position: fixed; bottom: 0; left: 0; right: 0; height: 64px; display: flex; align-items: center; gap: 0.6rem; padding: 0 1rem; background: rgba(8,8,20,0.98); border-top: 1px solid rgba(255,255,255,0.06); overflow-x: auto; z-index: 1000; }
+.ops-feed { grid-row: 3; display: flex; align-items: center; gap: 0.6rem; padding: 0 1rem; background: rgba(8,8,20,0.98); border-top: 1px solid rgba(255,255,255,0.06); overflow-x: auto; }
 .ops-feed-label { font-family: 'Courier New', monospace; font-size: 0.45rem; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(255,255,255,0.15); white-space: nowrap; flex-shrink: 0; }
 .ops-feed-card { flex-shrink: 0; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 4px; padding: 0.35rem 0.6rem; min-width: 160px; }
 .ops-feed-card.new { border-color: rgba(245,158,11,0.4); animation: feedFlash 1s; }
@@ -97,7 +97,7 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #050510; color: 
 .ops-feed-tx a { color: rgba(255,255,255,0.35); text-decoration: none; }
 
 /* ── CONTROLS ── */
-.ops-controls { position: fixed; bottom: 80px; left: 1rem; z-index: 500; display: flex; flex-direction: column; gap: 0.4rem; }
+.ops-controls { position: absolute; bottom: 16px; left: 1rem; z-index: 500; display: flex; flex-direction: column; gap: 0.4rem; }
 .ops-ctrl-btn { padding: 0.4rem 0.7rem; background: rgba(8,8,20,0.9); border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; color: rgba(255,255,255,0.5); font-size: 0.55rem; font-weight: 600; cursor: pointer; transition: all 0.3s; white-space: nowrap; }
 .ops-ctrl-btn:hover { border-color: rgba(255,255,255,0.2); color: #fff; }
 .ops-ctrl-btn.active { border-color: rgba(245,158,11,0.4); color: #f59e0b; background: rgba(245,158,11,0.08); }
@@ -146,7 +146,7 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #050510; color: 
     </div>
 
     <!-- FLIGHT TRACKING PANEL -->
-    <div id="flightPanel" style="display:none;position:absolute;bottom:80px;left:1rem;z-index:20;width:320px;background:rgba(8,8,20,0.97);border:1px solid rgba(34,211,238,0.2);border-radius:8px;padding:0.75rem;backdrop-filter:blur(12px);">
+    <div id="flightPanel" style="display:none;position:absolute;bottom:200px;left:1rem;z-index:600;width:320px;background:rgba(8,8,20,0.97);border:1px solid rgba(34,211,238,0.2);border-radius:8px;padding:0.75rem;backdrop-filter:blur(12px);">
       <div style="font-size:0.5rem;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:#22d3ee;margin-bottom:0.5rem;">Real-Time Air Cargo Tracker</div>
       <button id="scanBtn" onclick="scanFlights()" style="width:100%;padding:0.35rem;background:rgba(34,211,238,0.1);border:1px solid rgba(34,211,238,0.3);border-radius:4px;color:#22d3ee;font-size:0.5rem;font-weight:600;cursor:pointer;margin-bottom:0.4rem;">Scan Live Cargo Flights</button>
       <select id="flightSelect" style="width:100%;padding:0.35rem;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:4px;color:#fff;font-size:0.55rem;font-family:monospace;margin-bottom:0.4rem;outline:none;">
@@ -178,6 +178,7 @@ const CONTRACT = '0x289ee93a1717fbef60add4f630ed8356b7a7e8d3';
 const map = L.map('opsMap', { zoomControl: false, minZoom: 2 }).setView([25, 0], 3);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
 setTimeout(() => map.invalidateSize(), 200);
+window.addEventListener('resize', () => map.invalidateSize());
 
 // ── LAYERS ──
 let layers = {
