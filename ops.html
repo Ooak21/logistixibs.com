@@ -7,7 +7,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="./config.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Inter', system-ui, sans-serif; background: #050510; color: #fff; height: 100vh; overflow: hidden; -webkit-font-smoothing: antialiased; }
@@ -91,6 +90,10 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #050510; color: 
       <div class="ops-stat"><span class="ops-stat-val green" id="osDelivered">0</span><span class="ops-stat-label">Delivered</span></div>
     </div>
     <div class="ops-right">
+      <div style="display:flex;gap:0.3rem;align-items:center;">
+        <input id="trackInput" placeholder="Paste tracking #" style="width:160px;padding:0.3rem 0.5rem;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:4px;color:#fff;font-size:0.55rem;font-family:monospace;outline:none;">
+        <button onclick="addTrackedShipment()" style="padding:0.3rem 0.6rem;background:#f59e0b;color:#000;border:none;border-radius:4px;font-size:0.5rem;font-weight:700;cursor:pointer;letter-spacing:0.1em;">TRACK</button>
+      </div>
       <div class="ops-live"><div class="ops-live-dot"></div> Base Sepolia</div>
       <a href="./dashboard.html" class="ops-link">Dashboard &rarr;</a>
       <a href="./index.html" class="ops-link">Back</a>
@@ -118,11 +121,10 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #050510; color: 
 
 <script>
 const SB_SIM = 'https://jtifhcvbgxqwlywugvjv.supabase.co/functions/v1/logistix-simulate';
-const _cfg = window.LOGISTIX_CONFIG || {};
-const OWM_KEY = _cfg.openWeatherMap || '';
-const ORS_KEY = _cfg.openRouteService || '';
-const OPENSKY_ID = _cfg.openSkyClientId || '';
-const OPENSKY_SECRET = _cfg.openSkyClientSecret || '';
+const OWM_KEY = '7de9278c6029196f13803f6bee90871e';
+const ORS_KEY = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjlmMjZiNDMwMzllNjQxNGI5MTE2ZWNhZGZiZDlkYWMwIiwiaCI6Im11cm11cjY0In0=';
+const OPENSKY_ID = 'ibslasvegas-api-client';
+const OPENSKY_SECRET = 'ceE8G2CzH8WeegnTHJnb7wSowU5Czkb9';
 const CARGO_PREFIXES = ['FDX','UPS','GTI','CLX','BOX','GEC','CAL','KAL','EVA','SIA','CKS','ABW','ATN','5Y'];
 const CONTRACT = '0x289ee93a1717fbef60add4f630ed8356b7a7e8d3';
 
@@ -372,8 +374,98 @@ function tick(now) {
   requestAnimationFrame(tick);
 }
 
+// ── EASYPOST TRACKED SHIPMENTS ──
+const SB_TRACK = 'https://jtifhcvbgxqwlywugvjv.supabase.co/functions/v1/logistix-track-create';
+const SB_URL = 'https://jtifhcvbgxqwlywugvjv.supabase.co';
+const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0aWZoY3ZiZ3hxd2x5d3Vndmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1MDc5NTgsImV4cCI6MjA4ODA4Mzk1OH0.UfRVLuvM8_HPvKXUEDXb0cxR50znv16L5Tf99AnSc7g';
+const MAPBOX_GEO = 'pk.eyJ1IjoiaWJzLWxhc3ZlZ2FzIiwiYSI6ImNtbzZkdGZxeDE2MXAzd3BzZ2J5Y2htd2kifQ.onTZvAwslI9vJ7xwgmxzIg';
+
+let trackedShipments = [];
+
+async function addTrackedShipment() {
+  const input = document.getElementById('trackInput');
+  const code = input.value.trim();
+  if (!code) return;
+  input.value = '';
+
+  const feedCard = document.createElement('div');
+  feedCard.className = 'ops-feed-card new';
+  feedCard.innerHTML = `<div class="ops-feed-type">TRACKING</div><div class="ops-feed-route">${code}</div><div class="ops-feed-tx">Creating tracker...</div>`;
+  document.getElementById('opsFeed').appendChild(feedCard);
+
+  try {
+    const res = await fetch(SB_TRACK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ trackingCode: code }),
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      feedCard.querySelector('.ops-feed-tx').innerHTML = `${data.carrier} · ${data.status} · ${data.checkpoints} checkpoints`;
+      loadTrackedShipments();
+    } else {
+      feedCard.querySelector('.ops-feed-tx').textContent = 'Error: ' + (data.error || 'Unknown');
+    }
+  } catch (e) {
+    feedCard.querySelector('.ops-feed-tx').textContent = 'Error: ' + e.message;
+  }
+}
+
+async function geocodeCity(city, state, country) {
+  const q = [city, state, country].filter(Boolean).join(', ');
+  if (!q) return null;
+  try {
+    const res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(q)}.json?access_token=${MAPBOX_GEO}&limit=1`);
+    const data = await res.json();
+    const c = data.features?.[0]?.center;
+    return c ? { lat: c[1], lon: c[0] } : null;
+  } catch { return null; }
+}
+
+async function loadTrackedShipments() {
+  try {
+    const res = await fetch(`${SB_URL}/rest/v1/logistix_tracked?select=*&order=created_at.desc&limit=20`, {
+      headers: { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON },
+    });
+    const data = await res.json();
+    if (!Array.isArray(data)) return;
+
+    for (const t of data) {
+      if (trackedShipments.find(ts => ts.tracking_code === t.tracking_code)) continue;
+
+      const cps = t.checkpoints || [];
+      const lastCp = cps[cps.length - 1];
+      const loc = lastCp?.tracking_location;
+      const geo = loc ? await geocodeCity(loc.city, loc.state, loc.country) : null;
+
+      if (geo) {
+        const color = t.status === 'delivered' ? '#34d399' : t.status === 'failure' ? '#f87171' : '#f59e0b';
+        const marker = L.circleMarker([geo.lat, geo.lon], {
+          radius: 6, color, fillColor: color, fillOpacity: 0.9, weight: 2,
+        }).addTo(map).bindTooltip(`${t.carrier || '?'} · ${t.tracking_code}<br>${t.status}`, { direction: 'top' });
+
+        marker.on('click', () => {
+          openSidebar({
+            id: t.shipment_id,
+            origin: { name: cps[0]?.tracking_location?.city || 'Origin' },
+            dest: { name: loc?.city || 'Destination' },
+            cargo: t.cargo_type || 'Package',
+            mode: 'carrier',
+            carrier: t.carrier || 'Auto-detect',
+            progress: t.status === 'delivered' ? 1 : 0.5,
+            delivered: t.status === 'delivered',
+            checkpoints: t.last_anchor_tx ? [{ label: t.last_anchor_event || t.status, type: 2, txHash: t.last_anchor_tx, timestamp: Date.now() / 1000 }] : [],
+          });
+        });
+
+        trackedShipments.push({ ...t, marker, geo });
+      }
+    }
+  } catch (e) { console.warn('Load tracked failed:', e); }
+}
+
 // ── INIT ──
-// Fire CREATED for all shipments on load
 (async () => {
   for (const s of SHIPMENTS) {
     await fireCheckpoint(s, 0, 'CREATED', s.origin.lat, s.origin.lon);
@@ -381,7 +473,9 @@ function tick(now) {
   updateStats();
   requestAnimationFrame(tick);
   loadCargoFlights();
-  setInterval(loadCargoFlights, 300000); // Refresh flights every 5 min
+  loadTrackedShipments();
+  setInterval(loadCargoFlights, 300000);
+  setInterval(loadTrackedShipments, 60000); // Poll tracked shipments every minute
 })();
 </script>
 </body>
