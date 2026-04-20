@@ -40,21 +40,50 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #050510; color: 
 .leaflet-container { background: #050510; }
 
 /* ── SIDEBAR ── */
-.ops-sidebar { position: absolute; top: 44px; right: 0; width: 340px; height: calc(100vh - 44px - 64px); background: rgba(8,8,20,0.95); border-left: 1px solid rgba(255,255,255,0.04); z-index: 15; transform: translateX(100%); transition: transform 0.3s; overflow-y: auto; padding: 1rem; }
+.ops-sidebar { position: absolute; top: 44px; right: 0; width: 380px; height: calc(100vh - 44px - 64px); background: rgba(8,8,20,0.97); border-left: 1px solid rgba(255,255,255,0.06); z-index: 15; transform: translateX(100%); transition: transform 0.3s; overflow-y: auto; padding: 0; backdrop-filter: blur(12px); }
 .ops-sidebar.open { transform: translateX(0); }
-.ops-sidebar-close { position: absolute; top: 0.5rem; right: 0.5rem; background: none; border: none; color: rgba(255,255,255,0.4); font-size: 1rem; cursor: pointer; }
-.ops-sid-title { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; color: rgba(255,255,255,0.4); margin-bottom: 0.5rem; }
-.ops-sid-id { font-family: 'Courier New', monospace; font-size: 0.6rem; color: rgba(255,255,255,0.5); word-break: break-all; margin-bottom: 0.75rem; }
-.ops-sid-row { display: flex; justify-content: space-between; font-size: 0.65rem; margin-bottom: 0.3rem; }
-.ops-sid-key { color: rgba(255,255,255,0.3); }
-.ops-sid-val { color: rgba(255,255,255,0.7); }
-.ops-sid-divider { height: 1px; background: rgba(255,255,255,0.04); margin: 0.75rem 0; }
-.ops-sid-cp { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 4px; padding: 0.5rem; margin-bottom: 0.4rem; }
-.ops-sid-cp-type { font-size: 0.55rem; font-weight: 700; text-transform: uppercase; margin-bottom: 0.2rem; }
-.ops-sid-cp-type.amber { color: #f59e0b; } .ops-sid-cp-type.blue { color: #60a5fa; } .ops-sid-cp-type.green { color: #34d399; } .ops-sid-cp-type.purple { color: #8b5cf6; }
-.ops-sid-cp-detail { font-size: 0.5rem; color: rgba(255,255,255,0.4); }
-.ops-sid-cp-tx { font-family: 'Courier New', monospace; font-size: 0.5rem; }
+.ops-sidebar-close { position: absolute; top: 0.6rem; right: 0.6rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; color: rgba(255,255,255,0.5); font-size: 0.8rem; cursor: pointer; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
+.ops-sidebar-close:hover { color: #fff; background: rgba(255,255,255,0.1); }
+.ops-sid-hero { padding: 1rem 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.ops-sid-hero-top { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem; }
+.ops-sid-icon { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.ops-sid-hero-info { flex: 1; min-width: 0; }
+.ops-sid-carrier { font-size: 0.85rem; font-weight: 700; }
+.ops-sid-route-label { font-size: 0.55rem; color: rgba(255,255,255,0.4); margin-top: 0.1rem; }
+.ops-sid-tags { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+.ops-sid-tag { font-size: 0.4rem; font-weight: 700; padding: 0.1rem 0.35rem; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.06em; }
+.ops-sid-progress { margin-top: 0.6rem; }
+.ops-sid-bar { height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; }
+.ops-sid-bar-fill { height: 100%; border-radius: 2px; transition: width 0.5s; }
+.ops-sid-bar-labels { display: flex; justify-content: space-between; font-size: 0.4rem; color: rgba(255,255,255,0.3); margin-top: 0.2rem; }
+.ops-sid-body { padding: 0.75rem 1.25rem; }
+.ops-sid-section { font-size: 0.4rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; color: rgba(255,255,255,0.25); margin: 0.6rem 0 0.3rem; }
+.ops-sid-row { display: flex; justify-content: space-between; font-size: 0.65rem; padding: 0.2rem 0; }
+.ops-sid-key { color: rgba(255,255,255,0.35); }
+.ops-sid-val { color: rgba(255,255,255,0.8); font-weight: 500; }
+.ops-sid-divider { height: 1px; background: rgba(255,255,255,0.04); margin: 0.5rem 0; }
+.ops-sid-cp { background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; padding: 0.5rem 0.6rem; margin-bottom: 0.35rem; display: flex; gap: 0.5rem; align-items: flex-start; }
+.ops-sid-cp-icon { width: 24px; height: 24px; border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 0.5rem; font-weight: 800; }
+.ops-sid-cp-info { flex: 1; min-width: 0; }
+.ops-sid-cp-type { font-size: 0.55rem; font-weight: 700; text-transform: uppercase; }
+.ops-sid-cp-type.amber { color: #f59e0b; } .ops-sid-cp-type.blue { color: #60a5fa; } .ops-sid-cp-type.green { color: #34d399; } .ops-sid-cp-type.purple { color: #8b5cf6; } .ops-sid-cp-type.red { color: #f87171; } .ops-sid-cp-type.cyan { color: #22d3ee; }
+.ops-sid-cp-desc { font-size: 0.5rem; color: rgba(255,255,255,0.4); margin-top: 0.1rem; }
+.ops-sid-cp-detail { font-size: 0.45rem; color: rgba(255,255,255,0.25); margin-top: 0.1rem; }
+.ops-sid-cp-tx { font-family: 'Courier New', monospace; font-size: 0.45rem; margin-top: 0.15rem; }
 .ops-sid-cp-tx a { color: #60a5fa; text-decoration: none; }
+.ops-sid-footer { padding: 0.75rem 1.25rem; border-top: 1px solid rgba(255,255,255,0.06); text-align: center; }
+.ops-sid-footer a { font-size: 0.55rem; color: #60a5fa; text-decoration: none; font-weight: 600; }
+
+/* ── MAP CHECKPOINT POPUPS ── */
+.cp-popup { font-family: 'Inter', sans-serif; }
+.cp-popup-type { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+.cp-popup-desc { font-size: 10px; color: #666; margin-top: 2px; }
+.cp-popup-carrier { font-size: 10px; color: #999; margin-top: 2px; }
+.leaflet-popup-content-wrapper { background: rgba(12,12,24,0.95) !important; color: #fff !important; border-radius: 8px !important; border: 1px solid rgba(255,255,255,0.1) !important; box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important; }
+.leaflet-popup-tip { background: rgba(12,12,24,0.95) !important; border: 1px solid rgba(255,255,255,0.1) !important; }
+.leaflet-popup-content { margin: 8px 12px !important; }
+.cp-popup-desc { color: rgba(255,255,255,0.5) !important; }
+.cp-popup-carrier { color: rgba(255,255,255,0.35) !important; }
 
 /* ── FEED ── */
 .ops-feed { display: flex; align-items: center; gap: 0.6rem; padding: 0 1rem; background: rgba(8,8,20,0.95); border-top: 1px solid rgba(255,255,255,0.04); overflow-x: auto; z-index: 10; }
@@ -179,49 +208,112 @@ function gcArc(lat1, lon1, lat2, lon2, n) {
   return pts;
 }
 
-// ── SHIPMENT DEFINITIONS ──
+// ── VEHICLE SVG ICONS ──
+const VEHICLE_SVGS = {
+  air: `<svg width="28" height="28" viewBox="0 0 24 24" fill="COLOR" stroke="none"><path d="M12 2L8 10H2l2 4h4l-2 6h2l6-6h4l2-2-2-2h-4l6-6h-2l-6 2V2h-2z" opacity="0.9"/></svg>`,
+  truck: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="COLOR" stroke-width="2"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-1"/><circle cx="7" cy="18" r="2" fill="COLOR" stroke="none"/><circle cx="17" cy="18" r="2" fill="COLOR" stroke="none"/></svg>`,
+  sea: `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="COLOR" stroke-width="2"><path d="M2 20c2-1 4 0 6-1s4-2 6-1 4 0 6-1"/><path d="M4 17V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10"/><rect x="8" y="5" width="8" height="6" rx="1" fill="COLOR" opacity="0.3"/><line x1="12" y1="2" x2="12" y2="5"/></svg>`,
+};
+
+function vehicleIcon(mode, color, bearing) {
+  const svg = VEHICLE_SVGS[mode].replace(/COLOR/g, color);
+  const rot = mode === 'air' && bearing ? `transform:rotate(${bearing}deg)` : '';
+  return L.divIcon({
+    className: '',
+    html: `<div style="display:flex;align-items:center;justify-content:center;width:36px;height:36px;${rot};filter:drop-shadow(0 0 6px ${color}80);cursor:pointer;">${svg}</div>`,
+    iconSize: [36, 36],
+    iconAnchor: [18, 18],
+  });
+}
+
+// ── CHECKPOINT TYPE DEFINITIONS ──
+const CP_TYPES = {
+  0:  { label: 'CREATED', desc: 'Shipment created and registered on-chain', icon: '⊕', color: '#f59e0b', cls: 'amber' },
+  5:  { label: 'DELIVERED', desc: 'Shipment delivered to destination', icon: '✓', color: '#34d399', cls: 'green' },
+  7:  { label: 'WEIGH STATION', desc: 'DOT weigh station clearance', icon: 'W', color: '#a78bfa', cls: 'purple' },
+  8:  { label: 'REST AREA', desc: 'Driver mandatory rest stop (HOS compliance)', icon: 'R', color: '#71717a', cls: 'purple' },
+  9:  { label: 'FUEL STOP', desc: 'Refueling point', icon: 'F', color: '#f59e0b', cls: 'amber' },
+  10: { label: 'BORDER CROSSING', desc: 'International border checkpoint', icon: 'B', color: '#f87171', cls: 'red' },
+  11: { label: 'CUSTOMS CLEARED', desc: 'Customs inspection and clearance', icon: 'C', color: '#22d3ee', cls: 'cyan' },
+  12: { label: 'PORT DEPARTURE', desc: 'Departed origin port', icon: 'P', color: '#60a5fa', cls: 'blue' },
+  13: { label: 'AIRPORT ARRIVAL', desc: 'Arrived at destination airport', icon: 'A', color: '#60a5fa', cls: 'blue' },
+  14: { label: 'DISTRIBUTION HUB', desc: 'Regional distribution center sort', icon: 'D', color: '#a78bfa', cls: 'purple' },
+  15: { label: 'GEOFENCE TRIGGER', desc: 'Entered predefined geofence zone', icon: 'G', color: '#8b5cf6', cls: 'purple' },
+  16: { label: 'INSPECTION', desc: 'Cargo inspection checkpoint', icon: 'I', color: '#f87171', cls: 'red' },
+  17: { label: 'SEA TRANSIT', desc: 'Mid-ocean position report', icon: 'S', color: '#38bdf8', cls: 'cyan' },
+  18: { label: 'TRANSLOAD', desc: 'Cargo transferred between transport modes', icon: 'T', color: '#f59e0b', cls: 'amber' },
+};
+
+function getCpType(eventType) { return CP_TYPES[eventType] || { label: 'CHECKPOINT', desc: 'Unknown checkpoint type', icon: '?', color: '#71717a', cls: 'purple' }; }
+
+// ── SHIPMENT DEFINITIONS (Infrastructure Supply Chain) ──
 const SHIPMENTS = [
-  { id: null, origin: { lat: 34.05, lon: -118.24, name: 'Los Angeles, CA' }, dest: { lat: 31.23, lon: 121.47, name: 'Shanghai, China' }, cargo: 'Electronics', mode: 'air', carrier: 'EVA 777F', progress: 0.15, speed: 0.002, checkpointAt: 0.5 },
-  { id: null, origin: { lat: 25.76, lon: -80.19, name: 'Miami, FL' }, dest: { lat: 50.11, lon: 8.68, name: 'Frankfurt, Germany' }, cargo: 'Pharmaceuticals', mode: 'air', carrier: 'CLX 747-8F', progress: 0.35, speed: 0.0018, checkpointAt: 0.6 },
-  { id: null, origin: { lat: 29.76, lon: -95.37, name: 'Houston, TX' }, dest: { lat: 25.20, lon: 55.27, name: 'Dubai, UAE' }, cargo: 'Auto Parts', mode: 'air', carrier: 'ATN 767F', progress: 0.6, speed: 0.0015, checkpointAt: 0.7 },
-  { id: null, origin: { lat: 33.74, lon: -118.26, name: 'Long Beach, CA' }, dest: { lat: -23.55, lon: -46.63, name: 'São Paulo, Brazil' }, cargo: 'General Freight', mode: 'sea', carrier: 'Container Ship', progress: 0.25, speed: 0.0008, checkpointAt: 0.5 },
-  { id: null, origin: { lat: 34.05, lon: -118.24, name: 'Los Angeles, CA' }, dest: { lat: 36.17, lon: -115.14, name: 'Las Vegas, NV' }, cargo: 'Perishables', mode: 'truck', carrier: 'Semi Truck', progress: 0.1, speed: 0.004, checkpointAt: 0.45 },
+  { id: null, origin: { lat: 29.76, lon: -95.37, name: 'Houston, TX' }, dest: { lat: 31.23, lon: 121.47, name: 'Shanghai, China' }, cargo: 'Structural Steel (I-Beams)', mode: 'air', carrier: 'Atlas Air 747-8F', weight: '42,000 lbs', progress: 0.15, speed: 0.002, checkpoints_def: [{ at: 0.3, type: 11, name: 'LAX Customs' }, { at: 0.7, type: 13, name: 'NRT Airport' }] },
+  { id: null, origin: { lat: 25.76, lon: -80.19, name: 'Miami, FL' }, dest: { lat: 50.11, lon: 8.68, name: 'Frankfurt, Germany' }, cargo: 'Electrical Transformers', mode: 'air', carrier: 'Cargolux 747-8F', weight: '28,500 lbs', progress: 0.35, speed: 0.0018, checkpoints_def: [{ at: 0.5, type: 11, name: 'JFK Customs' }, { at: 0.8, type: 13, name: 'FRA Airport' }] },
+  { id: null, origin: { lat: 32.78, lon: -96.80, name: 'Dallas, TX' }, dest: { lat: 25.20, lon: 55.27, name: 'Dubai, UAE' }, cargo: 'Heavy Equipment (Crane Parts)', mode: 'air', carrier: 'Emirates SkyCargo 777F', weight: '65,200 lbs', progress: 0.6, speed: 0.0015, checkpoints_def: [{ at: 0.25, type: 7, name: 'I-20 Weigh Station' }, { at: 0.55, type: 11, name: 'JFK Customs' }] },
+  { id: null, origin: { lat: 33.74, lon: -118.26, name: 'Long Beach, CA' }, dest: { lat: -23.55, lon: -46.63, name: 'Santos, Brazil' }, cargo: 'Pipe Fittings (16" Valve Assemblies)', mode: 'sea', carrier: 'MSC Container Vessel', weight: '120,000 lbs', progress: 0.25, speed: 0.0008, checkpoints_def: [{ at: 0.15, type: 12, name: 'Long Beach Port' }, { at: 0.6, type: 17, name: 'Panama Canal Transit' }] },
+  { id: null, origin: { lat: 34.05, lon: -118.24, name: 'Los Angeles, CA' }, dest: { lat: 36.17, lon: -115.14, name: 'Las Vegas, NV' }, cargo: 'HVAC Units (Rooftop Package)', mode: 'truck', carrier: 'XPO Logistics Flatbed', weight: '18,400 lbs', progress: 0.1, speed: 0.004, checkpoints_def: [{ at: 0.35, type: 7, name: 'Barstow Weigh Station' }, { at: 0.65, type: 9, name: 'Baker Fuel Stop' }] },
+  { id: null, origin: { lat: 41.88, lon: -87.63, name: 'Chicago, IL' }, dest: { lat: 40.71, lon: -74.01, name: 'New York, NY' }, cargo: 'Concrete Precast Panels', mode: 'truck', carrier: 'Schneider National OD', weight: '44,000 lbs', progress: 0.45, speed: 0.003, checkpoints_def: [{ at: 0.3, type: 7, name: 'I-80 Weigh Station OH' }, { at: 0.7, type: 8, name: 'PA Turnpike Rest Area' }] },
 ];
 
-// Generate shipment IDs
-SHIPMENTS.forEach(s => {
-  const arr = new Uint8Array(32);
-  crypto.getRandomValues(arr);
-  s.id = '0x' + Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
-  s.checkpoints = [];
-  s.checkpointFired = false;
-  s.delivered = false;
-  s.routePts = gcArc(s.origin.lat, s.origin.lon, s.dest.lat, s.dest.lon, 80);
-  s.marker = null;
-  s.routeLine = null;
-});
-
-// ── DRAW ROUTES ──
+// Generate shipment IDs + init
 const modeColors = { air: 'rgba(96,165,250,0.35)', sea: 'rgba(56,189,248,0.3)', truck: 'rgba(245,158,11,0.3)' };
 const modeDash = { air: '10 8', sea: '6 10', truck: '8 6' };
 const dotColors = { air: '#60a5fa', sea: '#38bdf8', truck: '#f59e0b' };
 
 SHIPMENTS.forEach(s => {
-  s.routeLine = L.polyline(s.routePts, { color: modeColors[s.mode], weight: 1.5, dashArray: modeDash[s.mode] }).addTo(map);
-  // Origin + dest markers
-  L.circleMarker([s.origin.lat, s.origin.lon], { radius: 3, color: '#f59e0b', fillColor: '#f59e0b', fillOpacity: 0.6, weight: 1 }).addTo(map).bindTooltip(s.origin.name, { direction: 'top' });
-  L.circleMarker([s.dest.lat, s.dest.lon], { radius: 3, color: '#34d399', fillColor: '#34d399', fillOpacity: 0.6, weight: 1 }).addTo(map).bindTooltip(s.dest.name, { direction: 'top' });
-  // Checkpoint marker
-  const cpIdx = Math.floor(s.checkpointAt * s.routePts.length);
-  const cpPt = s.routePts[cpIdx];
-  L.circleMarker(cpPt, { radius: 4, color: '#8b5cf6', fillColor: '#8b5cf6', fillOpacity: 0.5, weight: 1 }).addTo(map).bindTooltip('Checkpoint Geofence', { direction: 'top' });
-  // Moving dot
+  const arr = new Uint8Array(32);
+  crypto.getRandomValues(arr);
+  s.id = '0x' + Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+  s.checkpoints = [];
+  s.cpFired = {};
+  s.delivered = false;
+  s.routePts = gcArc(s.origin.lat, s.origin.lon, s.dest.lat, s.dest.lon, 80);
+  s.marker = null;
+  s.routeLine = null;
+  s.cpMarkers = [];
+});
+
+// ── DRAW ROUTES + ICONS ──
+SHIPMENTS.forEach(s => {
+  const color = dotColors[s.mode];
+
+  s.routeLine = L.polyline(s.routePts, { color: modeColors[s.mode], weight: 2, dashArray: modeDash[s.mode] }).addTo(map);
+
+  // Origin marker
+  L.circleMarker([s.origin.lat, s.origin.lon], { radius: 5, color: '#f59e0b', fillColor: '#f59e0b', fillOpacity: 0.7, weight: 1 }).addTo(map)
+    .bindPopup(`<div class="cp-popup"><div class="cp-popup-type" style="color:#f59e0b">ORIGIN</div><div class="cp-popup-desc">${s.origin.name}</div><div class="cp-popup-carrier">${s.carrier} · ${s.cargo}</div></div>`);
+
+  // Destination marker
+  L.circleMarker([s.dest.lat, s.dest.lon], { radius: 5, color: '#34d399', fillColor: '#34d399', fillOpacity: 0.7, weight: 1 }).addTo(map)
+    .bindPopup(`<div class="cp-popup"><div class="cp-popup-type" style="color:#34d399">DESTINATION</div><div class="cp-popup-desc">${s.dest.name}</div><div class="cp-popup-carrier">${s.carrier} · ${s.cargo}</div></div>`);
+
+  // Checkpoint markers (clickable, labeled by type)
+  (s.checkpoints_def || []).forEach((cpDef, i) => {
+    const cpIdx = Math.floor(cpDef.at * s.routePts.length);
+    const cpPt = s.routePts[cpIdx];
+    const cpInfo = getCpType(cpDef.type);
+    const cpMarker = L.marker(cpPt, { icon: L.divIcon({
+      className: '',
+      html: `<div style="display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:4px;background:${cpInfo.color}22;border:1.5px solid ${cpInfo.color}66;color:${cpInfo.color};font-size:9px;font-weight:800;font-family:Inter,sans-serif;cursor:pointer;box-shadow:0 0 8px ${cpInfo.color}33;">${cpInfo.icon}</div>`,
+      iconSize: [22, 22], iconAnchor: [11, 11],
+    })}).addTo(map);
+    cpMarker.bindPopup(`<div class="cp-popup"><div class="cp-popup-type" style="color:${cpInfo.color}">${cpInfo.label}</div><div class="cp-popup-desc">${cpInfo.desc}</div><div class="cp-popup-carrier">${cpDef.name || ''} · ${s.carrier}</div></div>`);
+    s.cpMarkers.push(cpMarker);
+  });
+
+  // Moving vehicle icon
   const startIdx = Math.floor(s.progress * s.routePts.length);
   const startPt = s.routePts[Math.min(startIdx, s.routePts.length - 1)];
-  s.marker = L.circleMarker(startPt, { radius: 5, color: dotColors[s.mode], fillColor: dotColors[s.mode], fillOpacity: 1, weight: 2 }).addTo(map);
+  s.marker = L.marker(startPt, { icon: vehicleIcon(s.mode, color, 0), zIndexOffset: 1000 }).addTo(map);
   s.marker.on('click', () => openSidebar(s));
-  // Label
-  s.label = L.marker(startPt, { icon: L.divIcon({ className: '', html: `<div style="font-size:0.45rem;color:${dotColors[s.mode]};font-family:monospace;white-space:nowrap;text-shadow:0 0 4px rgba(0,0,0,0.9);">${s.carrier} · ${s.cargo}</div>`, iconSize: [120, 12], iconAnchor: [60, -8] }) }).addTo(map);
+
+  // Carrier label beneath vehicle
+  s.label = L.marker(startPt, { icon: L.divIcon({
+    className: '',
+    html: `<div style="font-size:10px;color:${color};font-family:Inter,sans-serif;font-weight:600;white-space:nowrap;text-shadow:0 1px 4px rgba(0,0,0,0.9),0 0 8px rgba(0,0,0,0.7);text-align:center;pointer-events:none;">${s.carrier.split(' ')[0]}<br><span style="font-size:8px;font-weight:400;opacity:0.6">${s.cargo.split('(')[0].trim().slice(0,18)}</span></div>`,
+    iconSize: [120, 28], iconAnchor: [60, -14],
+  })}).addTo(map);
 });
 
 // ── UPDATE STATS ──
@@ -238,25 +330,65 @@ updateStats();
 // ── SIDEBAR ──
 function openSidebar(s) {
   const sb = document.getElementById('opsSidebar');
-  const shortId = s.id.slice(0, 10) + '...' + s.id.slice(-4);
-  let cpHtml = s.checkpoints.length === 0 ? '<div style="font-size:0.55rem;color:rgba(255,255,255,0.2);">No checkpoints recorded yet</div>' : s.checkpoints.map(cp => {
-    const cls = cp.type === 5 ? 'green' : cp.type >= 7 ? 'purple' : 'blue';
-    return `<div class="ops-sid-cp"><div class="ops-sid-cp-type ${cls}">${cp.label}</div><div class="ops-sid-cp-detail">${new Date(cp.timestamp * 1000).toLocaleString()}</div><div class="ops-sid-cp-tx"><a href="https://sepolia.basescan.org/tx/${cp.txHash}" target="_blank">${cp.txHash.slice(0, 14)}...${cp.txHash.slice(-6)}</a></div></div>`;
-  }).join('');
+  const color = dotColors[s.mode] || '#f59e0b';
+  const modeLabel = { air: 'Air Freight', sea: 'Ocean Freight', truck: 'Ground', carrier: 'Carrier' }[s.mode] || s.mode;
+  const status = s.delivered ? 'DELIVERED' : s.progress > 0.5 ? 'EN ROUTE (PAST MIDPOINT)' : 'EN ROUTE';
+  const statusColor = s.delivered ? '#34d399' : '#60a5fa';
+  const pct = Math.round(s.progress * 100);
+
+  let cpHtml = '';
+  if (s.checkpoints.length === 0) {
+    cpHtml = '<div style="font-size:0.55rem;color:rgba(255,255,255,0.2);padding:0.3rem 0;">No checkpoints anchored yet</div>';
+  } else {
+    cpHtml = s.checkpoints.slice().reverse().map(cp => {
+      const cpInfo = getCpType(cp.type);
+      return `<div class="ops-sid-cp">
+        <div class="ops-sid-cp-icon" style="background:${cpInfo.color}15;color:${cpInfo.color};border:1px solid ${cpInfo.color}33;">${cpInfo.icon}</div>
+        <div class="ops-sid-cp-info">
+          <div class="ops-sid-cp-type ${cpInfo.cls}">${cpInfo.label}</div>
+          <div class="ops-sid-cp-desc">${cpInfo.desc}</div>
+          <div class="ops-sid-cp-detail">${cp.label || ''} · ${new Date(cp.timestamp * 1000).toLocaleString()}</div>
+          ${cp.txHash ? `<div class="ops-sid-cp-tx"><a href="https://sepolia.basescan.org/tx/${cp.txHash}" target="_blank">TX: ${cp.txHash.slice(0, 14)}...${cp.txHash.slice(-6)}</a></div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  }
 
   document.getElementById('opsSidebarContent').innerHTML = `
-    <div class="ops-sid-title">Shipment</div>
-    <div class="ops-sid-id">${s.id}</div>
-    <div class="ops-sid-row"><span class="ops-sid-key">Route</span><span class="ops-sid-val">${s.origin.name} → ${s.dest.name}</span></div>
-    <div class="ops-sid-row"><span class="ops-sid-key">Cargo</span><span class="ops-sid-val">${s.cargo}</span></div>
-    <div class="ops-sid-row"><span class="ops-sid-key">Mode</span><span class="ops-sid-val">${s.mode.toUpperCase()} — ${s.carrier}</span></div>
-    <div class="ops-sid-row"><span class="ops-sid-key">Progress</span><span class="ops-sid-val">${Math.round(s.progress * 100)}%</span></div>
-    <div class="ops-sid-row"><span class="ops-sid-key">Status</span><span class="ops-sid-val">${s.delivered ? 'DELIVERED' : s.checkpointFired ? 'PAST CHECKPOINT' : 'EN ROUTE'}</span></div>
-    <div class="ops-sid-divider"></div>
-    <div class="ops-sid-title">On-Chain Checkpoints (${s.checkpoints.length})</div>
-    ${cpHtml}
-    <div class="ops-sid-divider"></div>
-    <div style="text-align:center;"><a href="./track.html?id=${encodeURIComponent(s.id)}" target="_blank" style="font-size:0.55rem;color:#60a5fa;text-decoration:none;">View Full Audit Trail →</a></div>
+    <div class="ops-sid-hero">
+      <div class="ops-sid-hero-top">
+        <div class="ops-sid-icon" style="background:${color}15;border:1.5px solid ${color}44;">
+          ${VEHICLE_SVGS[s.mode] ? VEHICLE_SVGS[s.mode].replace(/COLOR/g, color).replace(/width="\d+"/, 'width="24"').replace(/height="\d+"/, 'height="24"') : ''}
+        </div>
+        <div class="ops-sid-hero-info">
+          <div class="ops-sid-carrier">${s.carrier}</div>
+          <div class="ops-sid-route-label">${s.origin.name} → ${s.dest.name}</div>
+        </div>
+      </div>
+      <div class="ops-sid-tags">
+        <span class="ops-sid-tag" style="color:${color};background:${color}18">${modeLabel}</span>
+        <span class="ops-sid-tag" style="color:${statusColor};background:${statusColor}18">${status}</span>
+        ${s.weight ? `<span class="ops-sid-tag" style="color:#a1a1aa;background:rgba(161,161,170,0.12)">${s.weight}</span>` : ''}
+      </div>
+      <div class="ops-sid-progress">
+        <div class="ops-sid-bar"><div class="ops-sid-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+        <div class="ops-sid-bar-labels"><span>${s.origin.name.split(',')[0]}</span><span>${pct}%</span><span>${s.dest.name.split(',')[0]}</span></div>
+      </div>
+    </div>
+    <div class="ops-sid-body">
+      <div class="ops-sid-section">Shipment Details</div>
+      <div class="ops-sid-row"><span class="ops-sid-key">Cargo</span><span class="ops-sid-val">${s.cargo}</span></div>
+      <div class="ops-sid-row"><span class="ops-sid-key">Carrier</span><span class="ops-sid-val">${s.carrier}</span></div>
+      <div class="ops-sid-row"><span class="ops-sid-key">Mode</span><span class="ops-sid-val">${modeLabel}</span></div>
+      ${s.weight ? `<div class="ops-sid-row"><span class="ops-sid-key">Weight</span><span class="ops-sid-val">${s.weight}</span></div>` : ''}
+      <div class="ops-sid-row"><span class="ops-sid-key">Progress</span><span class="ops-sid-val" style="color:${color};font-weight:700">${pct}%</span></div>
+      <div class="ops-sid-row"><span class="ops-sid-key">Shipment ID</span><span class="ops-sid-val" style="font-family:monospace;font-size:0.5rem">${s.id.slice(0,10)}...${s.id.slice(-4)}</span></div>
+
+      <div class="ops-sid-divider"></div>
+      <div class="ops-sid-section">On-Chain Checkpoints (${s.checkpoints.length})</div>
+      ${cpHtml}
+    </div>
+    <div class="ops-sid-footer"><a href="./track.html?id=${encodeURIComponent(s.id)}" target="_blank">View Full Audit Trail →</a></div>
   `;
   sb.classList.add('open');
 }
@@ -336,6 +468,15 @@ async function loadCargoFlights() {
   } catch (e) { console.warn('OpenSky:', e); }
 }
 
+// ── BEARING CALC ──
+function bearing(lat1, lon1, lat2, lon2) {
+  const toR = d => d * Math.PI / 180;
+  const dLon = toR(lon2 - lon1);
+  const y = Math.sin(dLon) * Math.cos(toR(lat2));
+  const x = Math.cos(toR(lat1)) * Math.sin(toR(lat2)) - Math.sin(toR(lat1)) * Math.cos(toR(lat2)) * Math.cos(dLon);
+  return ((Math.atan2(y, x) * 180 / Math.PI) + 360) % 360;
+}
+
 // ── ANIMATION LOOP ──
 let lastTick = performance.now();
 
@@ -354,20 +495,26 @@ function tick(now) {
       updateStats();
     }
 
-    // Check geofence
-    if (!s.checkpointFired && s.progress >= s.checkpointAt) {
-      s.checkpointFired = true;
-      const cpIdx = Math.floor(s.checkpointAt * s.routePts.length);
-      const cpPt = s.routePts[cpIdx];
-      const eventType = s.mode === 'air' ? 13 : s.mode === 'sea' ? 17 : 7;
-      const label = s.mode === 'air' ? 'AIRPORT_ARRIVAL' : s.mode === 'sea' ? 'SEA_TRANSIT' : 'WEIGH_STATION';
-      fireCheckpoint(s, eventType, label, cpPt[0], cpPt[1]);
-    }
+    // Check all defined checkpoints
+    (s.checkpoints_def || []).forEach((cpDef, i) => {
+      if (!s.cpFired[i] && s.progress >= cpDef.at) {
+        s.cpFired[i] = true;
+        const cpIdx = Math.floor(cpDef.at * s.routePts.length);
+        const cpPt = s.routePts[cpIdx];
+        fireCheckpoint(s, cpDef.type, cpDef.name || getCpType(cpDef.type).label, cpPt[0], cpPt[1]);
+      }
+    });
 
-    // Move dot
+    // Move vehicle
     const idx = Math.min(Math.floor(s.progress * s.routePts.length), s.routePts.length - 1);
     const pt = s.routePts[idx];
+    const nextIdx = Math.min(idx + 3, s.routePts.length - 1);
+    const nextPt = s.routePts[nextIdx];
+    const hdg = bearing(pt[0], pt[1], nextPt[0], nextPt[1]);
+
+    const color = dotColors[s.mode];
     s.marker.setLatLng(pt);
+    s.marker.setIcon(vehicleIcon(s.mode, color, hdg));
     s.label.setLatLng(pt);
   });
 
