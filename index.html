@@ -13,6 +13,132 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+    // Replace satellite 3D model with FAQ + Intake — injected after React renders
+    (function() {
+      function inject() {
+        var mv = document.querySelector('model-viewer');
+        if (!mv) return setTimeout(inject, 200);
+        var section = mv.closest('section') || mv.closest('div');
+        if (!section) return;
+
+        var faqHtml = '<div id="faq-intake" style="max-width:72rem;margin:0 auto;padding:0 1.5rem 5rem;display:grid;grid-template-columns:1fr;gap:2rem;">' +
+          '<div style="text-align:center;margin-bottom:1rem;">' +
+            '<span style="display:inline-block;backdrop-filter:blur(12px);background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:9999px;padding:6px 16px;font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.2em;font-family:monospace;margin-bottom:16px;">Get Started</span>' +
+            '<h2 style="font-size:clamp(1.8rem,4vw,2.5rem);font-weight:700;color:#fff;letter-spacing:-0.02em;margin:0;">Questions? We\'ve got answers.</h2>' +
+          '</div>' +
+          '<div style="display:grid;grid-template-columns:1fr;gap:2rem;" id="faqGrid"></div>' +
+        '</div>';
+
+        section.outerHTML = faqHtml;
+
+        var faqs = [
+          {q:'What does Logistix track?', a:'Real flights, carrier shipments, and supply chain cargo in real time. We pull live telemetry from aviation APIs and carrier networks, then overlay geofence checkpoints that anchor on the blockchain as permanent, verifiable records.'},
+          {q:'How does on-chain verification work?', a:'Every checkpoint is hashed with keccak256 and recorded on Base (Ethereum L2) via our ShipmentRegistry smart contract. Once anchored, it cannot be altered or deleted. Any party can verify the data independently on Basescan.'},
+          {q:'What is CORTEX intelligence?', a:'CORTEX is our AI engine. Ask it "where is flight F93978?" and it returns the full audit trail with live altitude, speed, heading, and every on-chain checkpoint with transaction links.'},
+          {q:'How do geofence checkpoints work?', a:'We draw virtual boundaries around airports, ports, and waypoints. When cargo crosses a boundary, a checkpoint fires automatically and anchors on-chain. Three per shipment: departure, midpoint, and arrival.'},
+          {q:'What does it cost to get started?', a:'We run a live demo you can try right now. For production deployments, reach out through the form and we\'ll scope your supply chain. Pricing scales with shipment volume.'},
+        ];
+
+        var grid = document.getElementById('faqGrid');
+        if (!grid) return;
+
+        // Make 2 columns on desktop
+        if (window.innerWidth >= 768) grid.style.gridTemplateColumns = '1fr 1fr';
+
+        // FAQ column
+        var faqCol = document.createElement('div');
+        faqCol.style.cssText = 'display:flex;flex-direction:column;gap:8px;';
+        faqs.forEach(function(f, i) {
+          var card = document.createElement('div');
+          card.style.cssText = 'backdrop-filter:blur(12px);background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;cursor:pointer;';
+          card.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;">' +
+            '<span style="font-size:14px;font-weight:600;color:#fff;">' + f.q + '</span>' +
+            '<span style="color:rgba(255,255,255,0.3);font-size:18px;transition:transform 0.2s;" class="faq-arrow">&#8964;</span></div>' +
+            '<div class="faq-body" style="max-height:0;overflow:hidden;transition:max-height 0.25s;padding:0 20px;">' +
+            '<p style="font-size:13px;color:rgba(255,255,255,0.5);line-height:1.7;padding-bottom:16px;margin:0;">' + f.a + '</p></div>';
+          card.addEventListener('click', function() {
+            var body = card.querySelector('.faq-body');
+            var arrow = card.querySelector('.faq-arrow');
+            var isOpen = body.style.maxHeight !== '0px' && body.style.maxHeight !== '';
+            // close all
+            document.querySelectorAll('.faq-body').forEach(function(b) { b.style.maxHeight = '0px'; });
+            document.querySelectorAll('.faq-arrow').forEach(function(a) { a.style.transform = ''; });
+            if (!isOpen) { body.style.maxHeight = '200px'; arrow.style.transform = 'rotate(180deg)'; }
+          });
+          faqCol.appendChild(card);
+        });
+        grid.appendChild(faqCol);
+
+        // Intake form column
+        var formCol = document.createElement('div');
+        var alreadyFilled = sessionStorage.getItem('logistix_lead');
+        if (alreadyFilled) {
+          formCol.innerHTML = '<div style="backdrop-filter:blur(12px);background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:32px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:300px;">' +
+            '<div style="width:48px;height:48px;border-radius:50%;background:rgba(245,158,11,0.1);display:flex;align-items:center;justify-content:center;margin-bottom:16px;font-size:20px;color:#f59e0b;">&#10003;</div>' +
+            '<div style="font-size:18px;font-weight:600;color:#fff;margin-bottom:8px;">You\'re in.</div>' +
+            '<div style="font-size:13px;color:rgba(255,255,255,0.4);margin-bottom:24px;">Our team will reach out shortly. Explore the live simulator.</div>' +
+            '<a href="/dashboard.html" style="background:#f59e0b;color:#000;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;">Launch Simulator &#8599;</a></div>';
+        } else {
+          var inputStyle = 'width:100%;padding:10px 14px;font-size:14px;font-family:inherit;color:#fff;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;outline:none;box-sizing:border-box;';
+          formCol.innerHTML = '<div style="backdrop-filter:blur(12px);background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:24px;">' +
+            '<div style="font-size:16px;font-weight:600;color:#fff;margin-bottom:4px;">Get a Demo</div>' +
+            '<div style="font-size:12px;color:rgba(255,255,255,0.35);margin-bottom:20px;">Tell us about your supply chain and we\'ll show you what Logistix can do.</div>' +
+            '<form id="landingLeadForm">' +
+              '<div style="margin-bottom:12px;"><label style="display:block;font-size:10px;font-weight:600;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">Name</label><input id="llName" required style="' + inputStyle + '" placeholder="Your name"></div>' +
+              '<div style="margin-bottom:12px;"><label style="display:block;font-size:10px;font-weight:600;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">Company</label><input id="llCompany" required style="' + inputStyle + '" placeholder="Company name"></div>' +
+              '<div style="margin-bottom:12px;"><label style="display:block;font-size:10px;font-weight:600;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">Email</label><input id="llEmail" type="email" required style="' + inputStyle + '" placeholder="you@company.com"></div>' +
+              '<div style="margin-bottom:16px;"><label style="display:block;font-size:10px;font-weight:600;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">What are you looking to solve?</label><textarea id="llDesc" rows="2" style="' + inputStyle + 'resize:none;" placeholder="Brief description..."></textarea></div>' +
+              '<button type="submit" style="width:100%;padding:12px;font-size:14px;font-weight:600;font-family:inherit;color:#000;background:#f59e0b;border:none;border-radius:8px;cursor:pointer;">Get Started &#9654;</button>' +
+            '</form>' +
+            '<div style="margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.04);text-align:center;">' +
+              '<div style="font-size:9px;color:rgba(255,255,255,0.2);text-transform:uppercase;letter-spacing:0.15em;margin-bottom:4px;">ShipmentRegistry Contract</div>' +
+              '<code style="font-size:10px;color:rgba(255,255,255,0.3);font-family:monospace;">0x9f40F5568EebdC76933AB1532e0A1f7efb84E302</code>' +
+            '</div></div>';
+        }
+        grid.appendChild(formCol);
+
+        // Form handler
+        var form = document.getElementById('landingLeadForm');
+        if (form) {
+          form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            var lead = {
+              name: document.getElementById('llName').value.trim(),
+              company: document.getElementById('llCompany').value.trim(),
+              email: document.getElementById('llEmail').value.trim(),
+              description: document.getElementById('llDesc').value.trim(),
+              timestamp: new Date().toISOString(),
+            };
+            sessionStorage.setItem('logistix_lead', JSON.stringify(lead));
+
+            var SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0aWZoY3ZiZ3hxd2x5d3Vndmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1MDc5NTgsImV4cCI6MjA4ODA4Mzk1OH0.UfRVLuvM8_HPvKXUEDXb0cxR50znv16L5Tf99AnSc7g';
+            var headers = {'Content-Type':'application/json','apikey':SB_ANON,'Authorization':'Bearer '+SB_ANON,'Prefer':'return=minimal'};
+            var SB = 'https://jtifhcvbgxqwlywugvjv.supabase.co';
+            fetch(SB+'/rest/v1/logistix_leads',{method:'POST',headers:headers,body:JSON.stringify(lead)}).catch(function(){});
+            fetch(SB+'/rest/v1/ibs_calls',{method:'POST',headers:headers,body:JSON.stringify({
+              telnyx_call_control_id:'logistix-web-'+Date.now(),
+              caller_name:lead.name,caller_email:lead.email,company_name:lead.company,
+              intent_classification:'SALES',routed_to:'moses',intent_score:'MEDIUM',
+              classification_reasoning:'Logistix landing page inquiry — '+(lead.description||'no description'),
+              pre_transfer_summary:lead.name+' from '+lead.company+' submitted inquiry from logistixibs.com. '+(lead.description||''),
+              call_status:'completed',
+              notes:'SOURCE: Logistix Landing Page\nCompany: '+lead.company+'\nEmail: '+lead.email+'\nDescription: '+(lead.description||'N/A'),
+              qualifying_answers:{source:'logistix_landing',company:lead.company,description:lead.description},
+              raw_event:{source:'logistix_landing',lead:lead},
+            })}).catch(function(){});
+
+            formCol.innerHTML = '<div style="backdrop-filter:blur(12px);background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:32px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:300px;">' +
+              '<div style="width:48px;height:48px;border-radius:50%;background:rgba(245,158,11,0.1);display:flex;align-items:center;justify-content:center;margin-bottom:16px;font-size:20px;color:#f59e0b;">&#10003;</div>' +
+              '<div style="font-size:18px;font-weight:600;color:#fff;margin-bottom:8px;">You\'re in.</div>' +
+              '<div style="font-size:13px;color:rgba(255,255,255,0.4);margin-bottom:24px;">Our team will reach out shortly. Explore the live simulator.</div>' +
+              '<a href="/dashboard.html" style="background:#f59e0b;color:#000;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;">Launch Simulator &#8599;</a></div>';
+          });
+        }
+      }
+      inject();
+    })();
+    </script>
   </body>
 </html>
 
