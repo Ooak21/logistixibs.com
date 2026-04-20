@@ -12,42 +12,50 @@
     <link rel="stylesheet" crossorigin href="/assets/index-DxMpKJdL.css">
   </head>
   <body>
+    <style>
+      /* Hide the satellite 3D model section */
+      model-viewer { display: none !important; }
+      model-viewer + *, model-viewer ~ * { }
+    </style>
     <div id="root"></div>
     <script>
     // Replace satellite 3D model with FAQ + Intake — injected after React renders
     (function() {
+      var attempts = 0;
       function inject() {
-        var mv = document.querySelector('model-viewer');
-        if (!mv) return setTimeout(inject, 200);
+        attempts++;
+        // Wait for React to finish rendering — look for footer as a signal
+        var footer = document.querySelector('footer');
+        if (!footer && attempts < 50) return setTimeout(inject, 100);
+        if (!footer) return;
 
-        // Find the 300vh scroll container and collapse it + the 200px spacer before it
-        var el = mv;
-        var scrollBox = null;
-        while (el && el.id !== 'root') {
-          if (el.offsetHeight > window.innerHeight * 2) { scrollBox = el; break; }
-          el = el.parentElement;
-        }
-        if (scrollBox) {
-          scrollBox.style.height = '0';
-          scrollBox.style.overflow = 'hidden';
-          // Hide the 200px spacer div before it if present
-          var prev = scrollBox.previousElementSibling;
-          if (prev && prev.offsetHeight < 250 && prev.offsetHeight > 100) {
-            prev.style.display = 'none';
+        // Find and collapse the satellite scrollytelling section
+        // It contains the model-viewer and has class h-[300vh]
+        var allDivs = document.querySelectorAll('div');
+        for (var i = 0; i < allDivs.length; i++) {
+          var cls = allDivs[i].className || '';
+          if (cls.indexOf('300vh') !== -1) {
+            allDivs[i].style.cssText = 'height:0 !important;overflow:hidden !important;';
+            // Also hide the spacer before it
+            var prev = allDivs[i].previousElementSibling;
+            if (prev && !prev.querySelector('footer') && !prev.querySelector('nav')) {
+              var prevCls = prev.className || '';
+              if (prevCls.indexOf('200px') !== -1 || prev.children.length === 0) {
+                prev.style.display = 'none';
+              }
+            }
+            break;
           }
         }
 
-        // Insert FAQ right after the collapsed section
+        // Don't duplicate
+        if (document.getElementById('faq-intake-wrapper')) return;
+
+        // Insert FAQ before footer
         var faqDiv = document.createElement('div');
         faqDiv.id = 'faq-intake-wrapper';
-        faqDiv.style.position = 'relative';
-        faqDiv.style.zIndex = '10';
-        if (scrollBox && scrollBox.parentElement) {
-          scrollBox.parentElement.insertBefore(faqDiv, scrollBox.nextSibling);
-        } else {
-          var footer = document.querySelector('footer');
-          if (footer) footer.parentElement.insertBefore(faqDiv, footer);
-        }
+        faqDiv.style.cssText = 'position:relative;z-index:10;pointer-events:auto;';
+        footer.parentElement.insertBefore(faqDiv, footer);
         var section = faqDiv;
 
         var faqHtml = '<div id="faq-intake" style="max-width:72rem;margin:0 auto;padding:0 1.5rem 5rem;display:grid;grid-template-columns:1fr;gap:2rem;">' +
