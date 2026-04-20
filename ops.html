@@ -35,7 +35,7 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #050510; color: 
 .ops-link:hover { color: #fff; }
 
 /* ── MAP ── */
-.ops-map { position: relative; overflow: hidden; isolation: isolate; z-index: 0; }
+.ops-map { grid-column: 1; grid-row: 2; position: relative; overflow: hidden; isolation: isolate; z-index: 0; min-height: 0; }
 #opsMap { position: absolute; inset: 0; background: #050510; }
 .leaflet-container { background: #050510; }
 
