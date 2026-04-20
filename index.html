@@ -24,46 +24,32 @@
       var attempts = 0;
       function inject() {
         attempts++;
-        // Wait for React to finish rendering — look for footer as a signal
-        var footer = document.querySelector('footer');
-        if (!footer && attempts < 50) return setTimeout(inject, 100);
-        if (!footer) return;
-
-        // Find and collapse the satellite scrollytelling section
-        // It contains the model-viewer and has class h-[300vh]
+        // Find the grey box by its distinctive class pattern
         var allDivs = document.querySelectorAll('div');
+        var greyBox = null;
         for (var i = 0; i < allDivs.length; i++) {
           var cls = allDivs[i].className || '';
-          if (cls.indexOf('300vh') !== -1) {
-            allDivs[i].style.cssText = 'height:0 !important;overflow:hidden !important;';
-            // Also hide the spacer before it
-            var prev = allDivs[i].previousElementSibling;
-            if (prev && !prev.querySelector('footer') && !prev.querySelector('nav')) {
-              var prevCls = prev.className || '';
-              if (prevCls.indexOf('200px') !== -1 || prev.children.length === 0) {
-                prev.style.display = 'none';
-              }
-            }
+          if (cls.indexOf('80vw') !== -1 && cls.indexOf('80vh') !== -1) {
+            greyBox = allDivs[i];
             break;
           }
         }
-
-        // Don't duplicate
+        if (!greyBox && attempts < 50) return setTimeout(inject, 100);
+        if (!greyBox) return;
         if (document.getElementById('faq-intake-wrapper')) return;
 
-        // Insert FAQ before footer
-        var faqDiv = document.createElement('div');
-        faqDiv.id = 'faq-intake-wrapper';
-        faqDiv.style.cssText = 'position:relative;z-index:10;pointer-events:auto;';
-        footer.parentElement.insertBefore(faqDiv, footer);
-        var section = faqDiv;
+        // Replace the grey box contents with FAQ + intake
+        greyBox.innerHTML = '';
+        greyBox.style.cssText = greyBox.style.cssText + ';display:flex;flex-direction:column;overflow-y:auto;padding:2rem;';
+        var section = greyBox;
+        section.id = 'faq-intake-wrapper';
 
-        var faqHtml = '<div id="faq-intake" style="max-width:72rem;margin:0 auto;padding:0 1.5rem 5rem;display:grid;grid-template-columns:1fr;gap:2rem;">' +
-          '<div style="text-align:center;margin-bottom:1rem;">' +
-            '<span style="display:inline-block;backdrop-filter:blur(12px);background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:9999px;padding:6px 16px;font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.2em;font-family:monospace;margin-bottom:16px;">Get Started</span>' +
-            '<h2 style="font-size:clamp(1.8rem,4vw,2.5rem);font-weight:700;color:#fff;letter-spacing:-0.02em;margin:0;">Questions? We\'ve got answers.</h2>' +
+        var faqHtml = '<div id="faq-intake" style="width:100%;height:100%;display:flex;flex-direction:column;">' +
+          '<div style="text-align:center;margin-bottom:1.5rem;flex-shrink:0;">' +
+            '<span style="display:inline-block;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:9999px;padding:4px 14px;font-size:9px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.2em;font-family:monospace;margin-bottom:10px;">Get Started</span>' +
+            '<h2 style="font-size:1.4rem;font-weight:700;color:#fff;letter-spacing:-0.02em;margin:0;">Questions? We\'ve got answers.</h2>' +
           '</div>' +
-          '<div style="display:grid;grid-template-columns:1fr;gap:2rem;" id="faqGrid"></div>' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;flex:1;min-height:0;overflow-y:auto;" id="faqGrid"></div>' +
         '</div>';
 
         section.innerHTML = faqHtml;
@@ -79,8 +65,7 @@
         var grid = document.getElementById('faqGrid');
         if (!grid) return;
 
-        // Make 2 columns on desktop
-        if (window.innerWidth >= 768) grid.style.gridTemplateColumns = '1fr 1fr';
+        // Grid is already 2 columns from the HTML
 
         // FAQ column
         var faqCol = document.createElement('div');
