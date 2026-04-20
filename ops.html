@@ -14,7 +14,7 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #050510; color: 
 .shell { display: grid; grid-template-columns: 1fr; grid-template-rows: 44px 1fr 64px; height: calc(100vh - 44px); }
 
 /* ── HEADER ── */
-.ops-header { display: flex; align-items: center; justify-content: space-between; padding: 0 1.25rem; background: rgba(8,8,20,0.95); border-bottom: 1px solid rgba(255,255,255,0.04); z-index: 10; }
+.ops-header { display: flex; align-items: center; justify-content: space-between; padding: 0 1.25rem; background: rgba(8,8,20,0.95); border-bottom: 1px solid rgba(255,255,255,0.04); position: relative; z-index: 2; }
 .ops-brand { display: flex; align-items: center; gap: 0.5rem; }
 .ops-brand-icon { width: 1.4rem; height: 1.4rem; border-radius: 3px; }
 .ops-brand-text { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.05em; }
@@ -35,7 +35,7 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #050510; color: 
 .ops-link:hover { color: #fff; }
 
 /* ── MAP ── */
-.ops-map { position: relative; overflow: hidden; }
+.ops-map { position: relative; overflow: hidden; isolation: isolate; z-index: 0; }
 #opsMap { width: 100%; height: 100%; background: #050510; }
 .leaflet-container { background: #050510; }
 
@@ -86,7 +86,7 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #050510; color: 
 .cp-popup-carrier { color: rgba(255,255,255,0.35) !important; }
 
 /* ── FEED ── */
-.ops-feed { display: flex; align-items: center; gap: 0.6rem; padding: 0 1rem; background: rgba(8,8,20,0.95); border-top: 1px solid rgba(255,255,255,0.04); overflow-x: auto; z-index: 10; }
+.ops-feed { display: flex; align-items: center; gap: 0.6rem; padding: 0 1rem; background: rgba(8,8,20,0.95); border-top: 1px solid rgba(255,255,255,0.04); overflow-x: auto; position: relative; z-index: 2; }
 .ops-feed-label { font-family: 'Courier New', monospace; font-size: 0.45rem; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(255,255,255,0.15); white-space: nowrap; flex-shrink: 0; }
 .ops-feed-card { flex-shrink: 0; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 4px; padding: 0.35rem 0.6rem; min-width: 160px; }
 .ops-feed-card.new { border-color: rgba(245,158,11,0.4); animation: feedFlash 1s; }
