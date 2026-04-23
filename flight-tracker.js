@@ -392,7 +392,9 @@ async function commitFlight() {
     if (!pollTimer) startPollCoordinator();
     updateLiveFlightStats();
     if (typeof renderRightPanel === 'function') renderRightPanel();
-    map.flyTo([candidate.lat, candidate.lon], 5, { duration: 1.5 });
+    // Use the already-guarded originLat/originLon (fall back to LAS if candidate has no live position —
+    // e.g., pre-departure flight where Airlabs hasn't surfaced a ground position yet).
+    map.flyTo([originLat, originLon], 5, { duration: 1.5 });
     document.getElementById('flightPanel').style.display = 'none';
   } catch (e) { alert('Error: ' + e.message); }
   finally { btn.disabled = false; btn.textContent = 'Commit to Track'; }
