@@ -220,7 +220,7 @@ async function checkIn() {
     document.getElementById('infoRoute').textContent = 'Shipment ' + id.slice(0, 8) + '...' + id.slice(-4);
 
     setTimeout(() => {
-      driverMap = L.map('driverMap', { zoomControl: false }).setView([37.5, -98], 4);
+      driverMap = L.map('driverMap', { zoomControl: false, attributionControl: false }).setView([37.5, -98], 4);
       L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(driverMap);
       setTimeout(() => driverMap.invalidateSize(), 200);
 

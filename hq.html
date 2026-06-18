@@ -570,7 +570,7 @@ function renderDetail(s) {
     body.innerHTML = '<div id="detailMap"></div>';
     setTimeout(() => {
       if (detailMap) detailMap.remove();
-      detailMap = L.map('detailMap', { zoomControl: false }).setView([38, -98], 4);
+      detailMap = L.map('detailMap', { zoomControl: false, attributionControl: false }).setView([38, -98], 4);
       L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(detailMap);
       const cps = s.checkpoints || [];
       cps.forEach(cp => {

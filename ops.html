@@ -273,7 +273,7 @@ async function sendCortexQuery() {
   messages.scrollTop = messages.scrollHeight;
 }
 
-const map = L.map('opsMap', { zoomControl: false, minZoom: 2 }).setView([25, 0], 3);
+const map = L.map('opsMap', { zoomControl: false, minZoom: 2, attributionControl: false }).setView([25, 0], 3);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
 setTimeout(() => map.invalidateSize(), 200);
 window.addEventListener('resize', () => map.invalidateSize());

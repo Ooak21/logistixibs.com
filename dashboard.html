@@ -24,9 +24,8 @@ body {
 .shell {
   display: grid;
   grid-template-columns: 1fr 380px;
-  grid-template-rows: 48px 42px 1fr 70px;
-  height: calc(100vh - 44px);
-  height: 100vh;
+  grid-template-rows: 48px 42px 1fr 88px;
+  height: calc(100vh - 44px); /* account for the 44px nav bar above; was overridden by 100vh, which clipped the bottom feed */
 }
 
 @media (max-width: 960px) {
@@ -151,7 +150,7 @@ body {
 .verify-btn.verified { background: rgba(52,211,153,0.1); border-color: rgba(52,211,153,0.3); color: #34d399; }
 
 /* ── BOTTOM FEED ── */
-.feed { grid-column: 1; grid-row: 4; background: rgba(12,12,24,0.95); border-top: 1px solid rgba(255,255,255,0.06); padding: 0.4rem 1rem; display: flex; gap: 0.6rem; align-items: center; overflow-x: auto; }
+.feed { grid-column: 1; grid-row: 4; background: rgba(12,12,24,0.95); border-top: 1px solid rgba(255,255,255,0.06); padding: 0.4rem 1rem; display: flex; gap: 0.6rem; align-items: center; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
 .feed-empty { font-family: 'Courier New', monospace; font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; opacity: 0.2; white-space: nowrap; }
 .cp-card { flex-shrink: 0; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; padding: 0.4rem 0.6rem; min-width: 180px; }
 .cp-card.active { border-color: rgba(245,158,11,0.5); }
@@ -177,7 +176,7 @@ body {
       <span style="font-size:0.85rem;font-weight:700;letter-spacing:0.06em;color:#fff;">LOGISTIX</span>
       <span style="font-size:0.4rem;color:rgba(245,158,11,0.6);border:1px solid rgba(245,158,11,0.2);padding:2px 6px;border-radius:9999px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;">Simulator</span>
     </div>
-    <a href="./index.html" style="font-size:0.55rem;color:rgba(255,255,255,0.4);text-decoration:none;display:flex;align-items:center;gap:4px;">&larr; Back to Home</a>
+    <a href="./index.html" style="font-size:0.7rem;font-weight:600;color:#f59e0b;text-decoration:none;display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:1px solid rgba(245,158,11,0.4);border-radius:8px;background:rgba(245,158,11,0.08);transition:all 0.2s;" onmouseover="this.style.background='rgba(245,158,11,0.18)';this.style.borderColor='rgba(245,158,11,0.7)'" onmouseout="this.style.background='rgba(245,158,11,0.08)';this.style.borderColor='rgba(245,158,11,0.4)'">&larr; Back to Home</a>
   </div>`;
 })();
 </script>
@@ -674,7 +673,7 @@ let shipments = [];
 let selectedShipment = null;
 
 // ── MAP ──
-const map = L.map('map', { zoomControl: false }).setView([20, 0], 2);
+const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([20, 0], 2);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
 setTimeout(() => map.invalidateSize(), 300);
 window.addEventListener('resize', () => map.invalidateSize());
@@ -1121,84 +1120,6 @@ async function startSimulation() {
 }
 </script>
 
-<!-- LEAD CAPTURE MODAL -->
-<div id="leadModal" style="position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px;">
-  <div style="width:100%;max-width:420px;background:#0c0c1a;border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:32px;box-shadow:0 8px 40px rgba(0,0,0,0.5);">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
-      <span style="font-size:0.75rem;font-weight:700;letter-spacing:0.06em;color:#f59e0b;">LOGISTIX</span>
-      <span style="font-size:0.35rem;color:rgba(255,255,255,0.3);border:1px solid rgba(255,255,255,0.1);padding:2px 5px;border-radius:9999px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;">Demo</span>
-    </div>
-    <div style="font-size:1.15rem;font-weight:600;color:#fff;margin:8px 0 4px;">Welcome to the Simulator</div>
-    <div style="font-size:0.75rem;color:#71717a;margin-bottom:20px;">To interact with the platform, please enter your information below.</div>
-    <form id="leadForm">
-      <div style="margin-bottom:12px;">
-        <label style="display:block;font-size:0.5rem;font-weight:600;color:#71717a;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px;">Name</label>
-        <input id="leadName" required style="width:100%;padding:10px 12px;font-size:0.8rem;font-family:Inter,sans-serif;color:#fff;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:6px;outline:none;" placeholder="Your name">
-      </div>
-      <div style="margin-bottom:12px;">
-        <label style="display:block;font-size:0.5rem;font-weight:600;color:#71717a;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px;">Company</label>
-        <input id="leadCompany" required style="width:100%;padding:10px 12px;font-size:0.8rem;font-family:Inter,sans-serif;color:#fff;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:6px;outline:none;" placeholder="Company name">
-      </div>
-      <div style="margin-bottom:12px;">
-        <label style="display:block;font-size:0.5rem;font-weight:600;color:#71717a;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px;">Email</label>
-        <input id="leadEmail" type="email" required style="width:100%;padding:10px 12px;font-size:0.8rem;font-family:Inter,sans-serif;color:#fff;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:6px;outline:none;" placeholder="you@company.com">
-      </div>
-      <div style="margin-bottom:16px;">
-        <label style="display:block;font-size:0.5rem;font-weight:600;color:#71717a;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px;">What are you looking to solve?</label>
-        <textarea id="leadDesc" rows="2" style="width:100%;padding:10px 12px;font-size:0.8rem;font-family:Inter,sans-serif;color:#fff;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:6px;outline:none;resize:none;" placeholder="Brief description..."></textarea>
-      </div>
-      <button type="submit" style="width:100%;padding:12px;font-size:0.8rem;font-weight:600;font-family:Inter,sans-serif;color:#000;background:#f59e0b;border:none;border-radius:8px;cursor:pointer;letter-spacing:0.02em;">Enter Simulator</button>
-    </form>
-    <div style="margin-top:16px;font-size:0.45rem;color:rgba(255,255,255,0.2);text-align:center;">Innovative Blockchain Solutions · logistixibs.com</div>
-  </div>
-</div>
-
-<script>
-(function() {
-  if (sessionStorage.getItem('logistix_lead')) {
-    document.getElementById('leadModal').style.display = 'none';
-    return;
-  }
-  document.getElementById('leadForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    var lead = {
-      name: document.getElementById('leadName').value.trim(),
-      company: document.getElementById('leadCompany').value.trim(),
-      email: document.getElementById('leadEmail').value.trim(),
-      description: document.getElementById('leadDesc').value.trim(),
-      timestamp: new Date().toISOString(),
-    };
-    sessionStorage.setItem('logistix_lead', JSON.stringify(lead));
-
-    var SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0aWZoY3ZiZ3hxd2x5d3Vndmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1MDc5NTgsImV4cCI6MjA4ODA4Mzk1OH0.UfRVLuvM8_HPvKXUEDXb0cxR50znv16L5Tf99AnSc7g';
-    var SB_URL = 'https://jtifhcvbgxqwlywugvjv.supabase.co';
-    var headers = { 'Content-Type': 'application/json', 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON, 'Prefer': 'return=minimal' };
-
-    // Store in logistix_leads as backup
-    fetch(SB_URL + '/rest/v1/logistix_leads', { method: 'POST', headers: headers, body: JSON.stringify(lead) }).catch(function() {});
-
-    // Create IBS CRM record tagged from Logistix
-    var crmRecord = {
-      telnyx_call_control_id: 'logistix-web-' + Date.now(),
-      caller_name: lead.name,
-      caller_email: lead.email,
-      company_name: lead.company,
-      intent_classification: 'SALES',
-      classification_reasoning: 'Logistix demo inquiry — ' + (lead.description || 'no description'),
-      routed_to: 'moses',
-      intent_score: 'MEDIUM',
-      pre_transfer_summary: lead.name + ' from ' + lead.company + ' accessed the Logistix simulator demo. ' + (lead.description || ''),
-      call_status: 'completed',
-      notes: 'SOURCE: Logistix Simulator (logistixibs.com)\nCompany: ' + lead.company + '\nEmail: ' + lead.email + '\nDescription: ' + (lead.description || 'N/A'),
-      qualifying_answers: { source: 'logistix_simulator', company: lead.company, description: lead.description },
-      raw_event: { source: 'logistix_simulator', lead: lead },
-    };
-    fetch(SB_URL + '/rest/v1/ibs_calls', { method: 'POST', headers: headers, body: JSON.stringify(crmRecord) }).catch(function() {});
-
-    document.getElementById('leadModal').style.display = 'none';
-  });
-})();
-</script>
+<!-- Lead-capture gate removed: simulator is a fully open public demo. Working system (hq/ops) is auth-gated. -->
 </body>
 </html>
