@@ -493,6 +493,39 @@ function pickCargoCarrier(region) {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
+// ── MARINE ROUTING (searoute-js — bundled marnet, no API key) ──
+// ?bundle inlines deps — without it, geojson-path-finder throws "$ is not a constructor" in-browser (verified in Chromium)
+const SEAROUTE_CDN = 'https://esm.sh/searoute-js@0.1.0?bundle';
+let searouteFn = null;
+let searouteLoadPromise = null;
+
+async function getSearoute() {
+  if (searouteFn) return searouteFn;
+  if (!searouteLoadPromise) {
+    searouteLoadPromise = import(SEAROUTE_CDN)
+      .then(m => { searouteFn = m.default; return searouteFn; })
+      .catch(e => { console.warn('searoute-js load failed:', e); return null; });
+  }
+  return searouteLoadPromise;
+}
+
+function geoJsonPoint(lon, lat) {
+  return { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [lon, lat] } };
+}
+
+function seaRoutePolyline(lat1, lon1, lat2, lon2, searoute) {
+  if (!searoute) return null;
+  try {
+    const route = searoute(geoJsonPoint(lon1, lat1), geoJsonPoint(lon2, lat2));
+    const coords = route?.geometry?.coordinates;
+    if (!coords || coords.length < 2) return null;
+    return coords.map(c => [c[1], c[0]]);
+  } catch (e) {
+    console.warn('Sea route failed:', e);
+    return null;
+  }
+}
+
 // ── GREAT CIRCLE ARC (for air legs) ──
 function greatCircleArc(lat1, lon1, lat2, lon2, segments = 50) {
   const toRad = d => d * Math.PI / 180;
@@ -549,6 +582,8 @@ const DESTINATIONS = {
   atlanta:      { lat: 33.7490, lon: -84.3880,  name: 'Atlanta, GA', region: 'us' },
   dallas:       { lat: 32.7767, lon: -96.7970,  name: 'Dallas, TX', region: 'us' },
   phoenix:      { lat: 33.4484, lon: -112.0740, name: 'Phoenix, AZ', region: 'us' },
+  // Hawaii & Pacific — DHX ocean-freight lanes
+  honolulu:     { lat: 21.3069, lon: -157.8583, name: 'Honolulu, HI', region: 'pacific' },
   // Europe
   london:       { lat: 51.5074, lon: -0.1278,   name: 'London, UK', region: 'europe' },
   paris:        { lat: 48.8566, lon: 2.3522,    name: 'Paris, France', region: 'europe' },
@@ -576,9 +611,9 @@ const LAX = { lat: 33.9425, lon: -118.4081, name: 'LAX Airport' };
 (function() {
   const sel = document.getElementById('destSelect');
   const groups = {
-    'United States': [], 'Europe': [], 'Asia': [], 'Middle East': [], 'South America': [], 'Oceania': []
+    'Hawaii & Pacific': [], 'United States': [], 'Europe': [], 'Asia': [], 'Middle East': [], 'South America': [], 'Oceania': []
   };
-  const regionMap = { us: 'United States', europe: 'Europe', asia: 'Asia', mideast: 'Middle East', south_america: 'South America', oceania: 'Oceania' };
+  const regionMap = { pacific: 'Hawaii & Pacific', us: 'United States', europe: 'Europe', asia: 'Asia', mideast: 'Middle East', south_america: 'South America', oceania: 'Oceania' };
   for (const [k, v] of Object.entries(DESTINATIONS)) {
     groups[regionMap[v.region]].push({ key: k, name: v.name });
   }
@@ -614,6 +649,23 @@ async function buildCheckpoints(destKey) {
     }
     cps.push({ label: 'DELIVERED', type: 5, lat: d.lat, lon: d.lon, locName: d.name, dur: 4500, transport: 'truck', bundle: { event: 'DELIVERED', method: 'Semi Truck' } });
     return cps;
+  }
+
+  if (d.region === 'pacific') {
+    // DHX ocean-freight lane: mainland drayage (road) -> Port of Long Beach -> open-Pacific transit
+    // -> island harbor -> DHX terminal -> island delivery. The sea legs are routed by searoute-js
+    // (marnet), which keeps them on navigable water and around land, so SEA TRANSIT can sit on the
+    // natural mid-ocean line. Domestic: no customs leg.
+    const portLA = { lat: 33.7361, lon: -118.2642, name: 'Port of Long Beach' };
+    return [
+      { label: 'CREATED', type: 0, lat: ORIGIN.lat, lon: ORIGIN.lon, locName: ORIGIN.name, dur: 0, transport: 'truck', bundle: { event: 'CREATED' } },
+      { label: 'LOADED', type: 1, lat: ORIGIN.lat, lon: ORIGIN.lon, locName: ORIGIN.name, dur: 0, transport: 'truck', bundle: { event: 'LOADED', method: 'Container Drayage' } },
+      { label: 'PORT DEPARTURE', type: 11, lat: portLA.lat, lon: portLA.lon, locName: portLA.name, dur: 2500, transport: 'sea', bundle: { event: 'PORT_DEPARTURE', method: 'Container Ship' } },
+      { label: 'SEA TRANSIT', type: 17, lat: (portLA.lat + d.lat) / 2, lon: (portLA.lon + d.lon) / 2, locName: 'Pacific Ocean — In Transit', dur: 4000, transport: 'sea', bundle: { event: 'SEA_TRANSIT', method: 'Container Ship' } },
+      { label: 'PORT ARRIVAL', type: 12, lat: d.lat - 0.002, lon: d.lon - 0.012, locName: city + ' Harbor', dur: 3000, transport: 'sea', bundle: { event: 'PORT_ARRIVAL', method: 'Container Ship' } },
+      { label: 'WAREHOUSE', type: 16, lat: d.lat + 0.004, lon: d.lon - 0.006, locName: city + ' DHX Terminal', dur: 2000, transport: 'truck', bundle: { event: 'WAREHOUSE_RECEIVED', method: 'DHX Terminal' } },
+      { label: 'DELIVERED', type: 5, lat: d.lat, lon: d.lon, locName: d.name, dur: 2000, transport: 'truck', bundle: { event: 'DELIVERED', method: 'Island Delivery' } },
+    ];
   }
 
   if (d.region === 'europe') {
@@ -875,13 +927,29 @@ function addFeedCard(label, result) {
 
 function setStatus(msg) { document.getElementById('simStatus').textContent = msg; }
 
-function animateDot(from, to, dur) {
+function animateAlongPath(pathPts, dur) {
+  if (!pathPts || pathPts.length < 2) return Promise.resolve();
   return new Promise(resolve => {
     const st = performance.now();
+    const dists = [0];
+    let total = 0;
+    for (let i = 1; i < pathPts.length; i++) {
+      const dlat = pathPts[i][0] - pathPts[i - 1][0];
+      const dlon = pathPts[i][1] - pathPts[i - 1][1];
+      total += Math.sqrt(dlat * dlat + dlon * dlon);
+      dists.push(total);
+    }
+    if (total === 0) { dot.setLatLng(pathPts[pathPts.length - 1]); resolve(); return; }
     function step(now) {
       const t = Math.min((now - st) / dur, 1);
-      const e = t < 0.5 ? 2*t*t : -1+(4-2*t)*t;
-      dot.setLatLng([from[0]+(to[0]-from[0])*e, from[1]+(to[1]-from[1])*e]);
+      const e = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+      const target = e * total;
+      let seg = 0;
+      while (seg < dists.length - 2 && dists[seg + 1] < target) seg++;
+      const segLen = dists[seg + 1] - dists[seg];
+      const frac = segLen > 0 ? (target - dists[seg]) / segLen : 0;
+      const p0 = pathPts[seg], p1 = pathPts[seg + 1];
+      dot.setLatLng([p0[0] + (p1[0] - p0[0]) * frac, p0[1] + (p1[1] - p0[1]) * frac]);
       if (t < 1) animFrame = requestAnimationFrame(step);
       else resolve();
     }
@@ -900,7 +968,36 @@ async function startSimulation() {
   const shipmentId = genId();
   const notifyEmail = document.getElementById('notifyEmail').value.trim();
   setStatus('Building route with live data...');
-  const checkpoints = await buildCheckpoints(destKey);
+  const [checkpoints, searoute] = await Promise.all([buildCheckpoints(destKey), getSearoute()]);
+
+  // Precompute the marine route ONCE per sea run, then slice it for the individual legs. searoute
+  // snaps to nearest network nodes, so re-routing through an intermediate waypoint detours wildly
+  // (loops past Midway, or cuts across the island). Slicing a single port->port path keeps every leg
+  // on the same verified water route and places intermediate markers (e.g. SEA TRANSIT) on it.
+  const seaLegSegments = {};
+  if (searoute) {
+    for (let s = 0; s < checkpoints.length; s++) {
+      if (checkpoints[s].transport !== 'sea') { continue; }
+      let e = s;
+      while (e + 1 < checkpoints.length && checkpoints[e + 1].transport === 'sea') e++;
+      if (e > s) {
+        const full = seaRoutePolyline(checkpoints[s].lat, checkpoints[s].lon, checkpoints[e].lat, checkpoints[e].lon, searoute);
+        if (full && full.length >= 2) {
+          // searoute ends at the nearest offshore node; extend to the actual harbor marker so the line connects
+          const end = [checkpoints[e].lat, checkpoints[e].lon];
+          const last = full[full.length - 1];
+          if (Math.abs(last[0] - end[0]) > 0.02 || Math.abs(last[1] - end[1]) > 0.02) full.push(end);
+          const n = e - s; // number of sea legs in this run
+          const idxs = [0];
+          for (let k = 1; k < n; k++) idxs.push(Math.round((full.length - 1) * k / n));
+          idxs.push(full.length - 1);
+          for (let k = 1; k < n; k++) { checkpoints[s + k].lat = full[idxs[k]][0]; checkpoints[s + k].lon = full[idxs[k]][1]; }
+          for (let k = 0; k < n; k++) seaLegSegments[s + k] = full.slice(idxs[k], idxs[k + 1] + 1);
+        }
+      }
+      s = e;
+    }
+  }
 
   generateQR(shipmentId);
   clearMapLayers();
@@ -922,11 +1019,15 @@ async function startSimulation() {
 
   // Draw segments between checkpoints with transport-specific styling
   const allRoutePts = [];
+  const legPaths = [];
   for (let i = 0; i < checkpoints.length - 1; i++) {
     const from = checkpoints[i];
     const to = checkpoints[i + 1];
     const isAirLeg = from.transport === 'air' || to.transport === 'air';
-    const isSeaLeg = from.transport === 'sea' || to.transport === 'sea';
+    // Sea leg only when BOTH ends are on the water (port-to-port open ocean). A truck->sea or
+    // sea->truck transition is the harbor drayage / island delivery leg, so it falls through to the
+    // truck branch and routes on real roads (ORS) instead of drawing an ocean line across land.
+    const isSeaLeg = from.transport === 'sea' && to.transport === 'sea';
     const isRailLeg = from.transport === 'rail' || to.transport === 'rail';
     const isTruckLeg = !isAirLeg && !isSeaLeg && !isRailLeg;
 
@@ -942,7 +1043,9 @@ async function startSimulation() {
       const aircraft = from.bundle?.aircraft || to.bundle?.aircraft || '';
       mapMarkers.push(L.marker(segPts[midIdx], { icon: L.divIcon({ className: '', html: `<div style="font-size:0.5rem;color:#60a5fa;font-family:monospace;white-space:nowrap;text-shadow:0 0 6px rgba(0,0,0,0.8);">✈ ${carrier} ${aircraft}</div>`, iconSize: [120, 16], iconAnchor: [60, 8] }) }).addTo(map));
     } else if (isSeaLeg) {
-      segPts = greatCircleArc(from.lat, from.lon, to.lat, to.lon, 40);
+      segPts = seaLegSegments[i]
+        || seaRoutePolyline(from.lat, from.lon, to.lat, to.lon, searoute)
+        || greatCircleArc(from.lat, from.lon, to.lat, to.lon, 40);
       style = { color: 'rgba(56,189,248,0.5)', weight: 2, dashArray: '6 10' };
     } else if (isRailLeg) {
       segPts = [[from.lat, from.lon], [to.lat, to.lon]];
@@ -968,6 +1071,7 @@ async function startSimulation() {
 
     const line = L.polyline(segPts, style).addTo(map);
     mapMarkers.push(line);
+    legPaths.push(segPts);
     allRoutePts.push(...segPts);
 
     if (etaLabel && segPts.length > 2) {
@@ -1077,7 +1181,7 @@ async function startSimulation() {
 
       if (cp.dur > 0 && i > 0) {
         setStatus('In transit → ' + cp.label + '...');
-        await animateDot(pts[i - 1], pts[i], cp.dur);
+        await animateAlongPath(legPaths[i - 1], cp.dur);
       }
 
       setStatus('Recording ' + cp.label + ' on-chain...');
