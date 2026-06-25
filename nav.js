@@ -25,7 +25,7 @@
   mount.innerHTML = `
     <div class="lnav">
       <div class="lnav-brand">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c25a4d" stroke-width="2"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
         <span class="lnav-name">LOGISTIX</span>
         <span class="lnav-by">by CORTEX</span>
       </div>
@@ -41,19 +41,19 @@
     const style = document.createElement('style');
     style.id = 'lnav-styles';
     style.textContent = `
-      .lnav { display:flex; align-items:center; justify-content:space-between; padding:0 1.25rem; height:44px; background:rgba(8,8,20,0.97); border-bottom:1px solid rgba(255,255,255,0.06); position:sticky; top:0; z-index:100; backdrop-filter:blur(12px); }
+      .lnav { display:flex; align-items:center; justify-content:space-between; padding:0 1.25rem; height:44px; background:rgba(14, 13, 11,0.97); border-bottom:1px solid rgba(255,255,255,0.06); position:sticky; top:0; z-index:100; backdrop-filter:blur(12px); }
       .lnav-brand { display:flex; align-items:center; gap:0.5rem; }
-      .lnav-name { font-size:0.85rem; font-weight:700; letter-spacing:0.06em; color:#fff; }
-      .lnav-by { font-size:0.4rem; color:rgba(245,158,11,0.6); border:1px solid rgba(245,158,11,0.2); padding:0.1rem 0.35rem; border-radius:9999px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; }
+      .lnav-name { font-size:0.85rem; font-weight:700; letter-spacing:0.06em; color:#F3EEE4; }
+      .lnav-by { font-size:0.4rem; color:rgba(155, 59, 48,0.6); border:1px solid rgba(155, 59, 48,0.2); padding:0.1rem 0.35rem; border-radius:9999px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; }
       .lnav-tabs { display:flex; align-items:center; gap:0.15rem; }
       .lnav-tab { display:flex; align-items:center; gap:0.35rem; padding:0.35rem 0.65rem; font-size:0.5rem; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:rgba(255,255,255,0.3); text-decoration:none; border-radius:4px; transition:all 0.2s; }
       .lnav-tab:hover { color:rgba(255,255,255,0.6); background:rgba(255,255,255,0.03); }
-      .lnav-tab.active { color:#f59e0b; background:rgba(245,158,11,0.08); }
+      .lnav-tab.active { color:#c25a4d; background:rgba(155, 59, 48,0.08); }
       .lnav-tab svg { opacity:0.6; }
-      .lnav-tab.active svg { opacity:1; stroke:#f59e0b; }
+      .lnav-tab.active svg { opacity:1; stroke:#c25a4d; }
       .lnav-right { display:flex; align-items:center; gap:0.8rem; }
       .lnav-chain { display:flex; align-items:center; gap:0.3rem; font-size:0.5rem; color:rgba(255,255,255,0.35); }
-      .lnav-dot { width:5px; height:5px; border-radius:50%; background:#34d399; animation:lnavPulse 2s infinite; }
+      .lnav-dot { width:5px; height:5px; border-radius:50%; background:#5aa08c; animation:lnavPulse 2s infinite; }
       @keyframes lnavPulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
       @media(max-width:768px) { .lnav-tab span { display:none; } .lnav-tab { padding:0.35rem; } }
     `;
