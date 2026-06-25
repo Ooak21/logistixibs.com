@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>IBS Logistix — Dashboard</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
@@ -13,9 +13,9 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
   background: #080810;
-  color: #fff;
+  color: #F3EEE4;
   height: 100vh;
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
@@ -38,26 +38,26 @@ body {
   grid-column: 1 / -1; grid-row: 1;
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 1.25rem;
-  background: rgba(12,12,24,0.95);
+  background: rgba(14, 13, 11,0.95);
   border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 .header-left { display: flex; align-items: center; gap: 0.6rem; }
-.header-logo { width: 1.4rem; height: 1.4rem; color: #f59e0b; }
+.header-logo { width: 1.4rem; height: 1.4rem; color: #b0463a; }
 .header-title { font-size: 0.95rem; font-weight: 600; letter-spacing: -0.02em; }
 .header-badge { font-size: 0.5rem; color: rgba(255,255,255,0.4); border: 1px solid rgba(255,255,255,0.15); padding: 0.15rem 0.4rem; border-radius: 4px; font-family: monospace; letter-spacing: 0.1em; text-transform: uppercase; }
 .header-right { display: flex; align-items: center; gap: 0.8rem; }
 .header-live { display: flex; align-items: center; gap: 0.3rem; font-size: 0.6rem; color: rgba(255,255,255,0.45); }
-.live-dot { width: 5px; height: 5px; border-radius: 50%; background: #34d399; animation: pulse 2s infinite; }
+.live-dot { width: 5px; height: 5px; border-radius: 50%; background: #5aa08c; animation: pulse 2s infinite; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 .header-back { font-size: 0.6rem; color: rgba(255,255,255,0.35); text-decoration: none; }
-.header-back:hover { color: #fff; }
+.header-back:hover { color: #F3EEE4; }
 
 /* ── COMPACT STATS ── */
 .stats-row {
   grid-column: 1; grid-row: 2;
   display: flex; align-items: center; gap: 0.5rem;
   padding: 0 1.25rem;
-  background: rgba(12,12,24,0.5);
+  background: rgba(14, 13, 11,0.5);
   border-bottom: 1px solid rgba(255,255,255,0.04);
 }
 .stat-pill {
@@ -69,7 +69,7 @@ body {
 }
 .stat-pill .sv { font-size: 0.9rem; font-weight: 700; }
 .stat-pill .sl { font-size: 0.5rem; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.1em; }
-.sv.blue { color: #60a5fa; } .sv.red { color: #f87171; } .sv.green { color: #34d399; } .sv.white { color: #e4e4e7; }
+.sv.blue { color: #7ea3c1; } .sv.red { color: #c4564a; } .sv.green { color: #5aa08c; } .sv.white { color: #ece6da; }
 
 /* ── MAP ── */
 .map-area { grid-column: 1; grid-row: 3; position: relative; overflow: hidden; }
@@ -77,34 +77,34 @@ body {
 .leaflet-container { background: #080810; }
 
 /* ── RIGHT PANEL ── */
-.right-panel { grid-column: 2; grid-row: 2 / 5; display: flex; flex-direction: column; border-left: 1px solid rgba(255,255,255,0.06); background: rgba(12,12,24,0.95); overflow: hidden; }
+.right-panel { grid-column: 2; grid-row: 2 / 5; display: flex; flex-direction: column; border-left: 1px solid rgba(255,255,255,0.06); background: rgba(14, 13, 11,0.95); overflow: hidden; }
 
 .panel-tabs { display: flex; border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
 .ptab { flex: 1; padding: 0.6rem 0; font-size: 0.55rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; text-align: center; color: rgba(255,255,255,0.3); background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.3s; }
 .ptab:hover { color: rgba(255,255,255,0.55); }
-.ptab.active { color: #f59e0b; border-bottom-color: #f59e0b; }
+.ptab.active { color: #b0463a; border-bottom-color: #b0463a; }
 
 .tab-content { flex: 1; overflow-y: auto; display: none; flex-direction: column; }
 .tab-content.active { display: flex; }
 
 /* ── FORM ── */
 .sim-form { padding: 0.75rem; display: flex; flex-direction: column; gap: 0.6rem; }
-.form-label { font-family: 'Courier New', monospace; font-size: 0.45rem; letter-spacing: 0.3em; text-transform: uppercase; color: rgba(255,255,255,0.35); margin-bottom: 0.15rem; display: block; }
-.form-input, .form-select { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; color: #fff; font-family: 'Inter', sans-serif; font-size: 0.72rem; padding: 0.45rem 0.6rem; outline: none; }
-.form-input:focus, .form-select:focus { border-color: rgba(245,158,11,0.5); }
+.form-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.45rem; letter-spacing: 0.3em; text-transform: uppercase; color: rgba(255,255,255,0.35); margin-bottom: 0.15rem; display: block; }
+.form-input, .form-select { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; color: #F3EEE4; font-family: 'IBM Plex Sans', sans-serif; font-size: 0.72rem; padding: 0.45rem 0.6rem; outline: none; }
+.form-input:focus, .form-select:focus { border-color: rgba(155, 59, 48,0.5); }
 .form-select option { background: #0c0c18; }
 .form-input::placeholder { color: rgba(255,255,255,0.2); }
 
-.sim-btn { width: 100%; padding: 0.65rem; background: #f59e0b; color: #000; border: none; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; cursor: pointer; }
-.sim-btn:hover { background: #fbbf24; }
+.sim-btn { width: 100%; padding: 0.65rem; background: #b0463a; color: #F3EEE4; border: none; border-radius: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; cursor: pointer; }
+.sim-btn:hover { background: #c25a4d; }
 .sim-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-.sim-status { font-family: 'Courier New', monospace; font-size: 0.5rem; letter-spacing: 0.1em; text-align: center; color: #f59e0b; min-height: 1em; }
+.sim-status { font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; letter-spacing: 0.1em; text-align: center; color: #b0463a; min-height: 1em; }
 
 .pipeline { display: flex; flex-wrap: wrap; gap: 1px; }
-.pip-step { flex: 1; min-width: 0; font-family: 'Courier New', monospace; font-size: 0.4rem; letter-spacing: 0.05em; text-transform: uppercase; text-align: center; padding: 0.25rem 0.1rem; border: 1px solid rgba(255,255,255,0.06); color: rgba(255,255,255,0.2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.pip-step.active { background: rgba(245,158,11,0.15); border-color: rgba(245,158,11,0.4); color: #f59e0b; }
-.pip-step.done { background: rgba(52,211,153,0.1); border-color: rgba(52,211,153,0.3); color: #34d399; }
+.pip-step { flex: 1; min-width: 0; font-family: 'IBM Plex Mono', monospace; font-size: 0.4rem; letter-spacing: 0.05em; text-transform: uppercase; text-align: center; padding: 0.25rem 0.1rem; border: 1px solid rgba(255,255,255,0.06); color: rgba(255,255,255,0.2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pip-step.active { background: rgba(155, 59, 48,0.15); border-color: rgba(155, 59, 48,0.4); color: #b0463a; }
+.pip-step.done { background: rgba(90, 160, 140,0.1); border-color: rgba(90, 160, 140,0.3); color: #5aa08c; }
 
 /* ── SHIPMENTS TAB ── */
 .ship-item { padding: 0.6rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.04); cursor: pointer; transition: background 0.2s; }
@@ -114,53 +114,53 @@ body {
 .ship-route { font-size: 0.6rem; color: rgba(255,255,255,0.4); margin-top: 0.1rem; }
 .ship-meta { font-size: 0.55rem; color: rgba(255,255,255,0.25); margin-top: 0.2rem; display: flex; justify-content: space-between; }
 .ship-badge { font-size: 0.45rem; font-weight: 700; text-transform: uppercase; padding: 0.1rem 0.35rem; border-radius: 9999px; }
-.ship-badge.in_transit { background: rgba(96,165,250,0.2); color: #60a5fa; }
-.ship-badge.delivered { background: rgba(52,211,153,0.2); color: #34d399; }
+.ship-badge.in_transit { background: rgba(126, 163, 193,0.2); color: #7ea3c1; }
+.ship-badge.delivered { background: rgba(90, 160, 140,0.2); color: #5aa08c; }
 .ship-badge.created { background: rgba(161,161,170,0.2); color: #a1a1aa; }
 
 /* ── CORTEX TAB ── */
 .cortex-header { padding: 0.6rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; }
-.cortex-dot { width: 5px; height: 5px; border-radius: 50%; background: #34d399; animation: pulse 2s infinite; }
+.cortex-dot { width: 5px; height: 5px; border-radius: 50%; background: #5aa08c; animation: pulse 2s infinite; }
 .cortex-label { font-size: 0.75rem; font-weight: 600; }
 .cortex-sub { font-size: 0.55rem; color: rgba(255,255,255,0.3); }
 .cortex-messages { flex: 1; overflow-y: auto; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; }
 .cmsg { max-width: 88%; padding: 0.45rem 0.65rem; border-radius: 8px; font-size: 0.72rem; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
-.cmsg.user { background: #2563eb; align-self: flex-end; }
+.cmsg.user { background: #3A5F7D; align-self: flex-end; }
 .cmsg.assistant { background: rgba(255,255,255,0.06); align-self: flex-start; color: rgba(255,255,255,0.85); }
 .cortex-input-row { padding: 0.5rem; border-top: 1px solid rgba(255,255,255,0.06); display: flex; gap: 0.4rem; flex-shrink: 0; }
-.cortex-input { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 0.45rem 0.6rem; color: #fff; font-size: 0.72rem; outline: none; font-family: 'Inter', sans-serif; }
+.cortex-input { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 0.45rem 0.6rem; color: #F3EEE4; font-size: 0.72rem; outline: none; font-family: 'IBM Plex Sans', sans-serif; }
 .cortex-input::placeholder { color: rgba(255,255,255,0.2); }
-.cortex-send { padding: 0.45rem 0.8rem; background: #f59e0b; color: #000; border: none; border-radius: 6px; font-size: 0.65rem; font-weight: 600; cursor: pointer; }
+.cortex-send { padding: 0.45rem 0.8rem; background: #b0463a; color: #F3EEE4; border: none; border-radius: 6px; font-size: 0.65rem; font-weight: 600; cursor: pointer; }
 .cortex-send:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* ── CHAIN OPS TAB ── */
 .chain-section { padding: 0.75rem; }
 .chain-label { font-size: 0.55rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: rgba(255,255,255,0.35); margin-bottom: 0.4rem; }
-.chain-mono { font-family: 'Courier New', monospace; font-size: 0.6rem; color: rgba(255,255,255,0.55); word-break: break-all; background: rgba(255,255,255,0.04); padding: 0.4rem; border-radius: 3px; }
-.chain-link { color: #60a5fa; text-decoration: none; font-family: 'Courier New', monospace; font-size: 0.55rem; }
-.chain-link:hover { color: #93bbfd; }
+.chain-mono { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; color: rgba(255,255,255,0.55); word-break: break-all; background: rgba(255,255,255,0.04); padding: 0.4rem; border-radius: 3px; }
+.chain-link { color: #7ea3c1; text-decoration: none; font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; }
+.chain-link:hover { color: #a7c4d8; }
 .chain-cp { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; padding: 0.6rem; margin-bottom: 0.5rem; }
 .chain-cp-type { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; margin-bottom: 0.3rem; }
-.chain-cp-type.green { color: #34d399; } .chain-cp-type.blue { color: #60a5fa; } .chain-cp-type.purple { color: #8b5cf6; } .chain-cp-type.gray { color: #a1a1aa; } .chain-cp-type.amber { color: #f59e0b; }
+.chain-cp-type.green { color: #5aa08c; } .chain-cp-type.blue { color: #7ea3c1; } .chain-cp-type.purple { color: #7ea3c1; } .chain-cp-type.gray { color: #a1a1aa; } .chain-cp-type.amber { color: #b0463a; }
 .chain-cp-row { display: flex; justify-content: space-between; font-size: 0.55rem; margin-bottom: 0.1rem; }
 .chain-cp-key { color: rgba(255,255,255,0.3); }
 .chain-cp-val { color: rgba(255,255,255,0.6); }
 .verify-btn { width: 100%; margin-top: 0.3rem; padding: 0.35rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 3px; color: rgba(255,255,255,0.45); font-size: 0.5rem; font-weight: 600; cursor: pointer; }
-.verify-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
-.verify-btn.verified { background: rgba(52,211,153,0.1); border-color: rgba(52,211,153,0.3); color: #34d399; }
+.verify-btn:hover { background: rgba(255,255,255,0.1); color: #F3EEE4; }
+.verify-btn.verified { background: rgba(90, 160, 140,0.1); border-color: rgba(90, 160, 140,0.3); color: #5aa08c; }
 
 /* ── BOTTOM FEED ── */
-.feed { grid-column: 1; grid-row: 4; background: rgba(12,12,24,0.95); border-top: 1px solid rgba(255,255,255,0.06); padding: 0.4rem 1rem; display: flex; gap: 0.6rem; align-items: center; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
-.feed-empty { font-family: 'Courier New', monospace; font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; opacity: 0.2; white-space: nowrap; }
+.feed { grid-column: 1; grid-row: 4; background: rgba(14, 13, 11,0.95); border-top: 1px solid rgba(255,255,255,0.06); padding: 0.4rem 1rem; display: flex; gap: 0.6rem; align-items: center; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
+.feed-empty { font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; opacity: 0.2; white-space: nowrap; }
 .cp-card { flex-shrink: 0; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; padding: 0.4rem 0.6rem; min-width: 180px; }
-.cp-card.active { border-color: rgba(245,158,11,0.5); }
-.cp-card.done { border-color: rgba(52,211,153,0.3); }
-.cp-label { font-family: 'Courier New', monospace; font-size: 0.45rem; letter-spacing: 0.15em; text-transform: uppercase; color: #f59e0b; margin-bottom: 0.15rem; }
-.cp-card.done .cp-label { color: #34d399; }
-.cp-hash { font-family: 'Courier New', monospace; font-size: 0.5rem; }
+.cp-card.active { border-color: rgba(155, 59, 48,0.5); }
+.cp-card.done { border-color: rgba(90, 160, 140,0.3); }
+.cp-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.45rem; letter-spacing: 0.15em; text-transform: uppercase; color: #b0463a; margin-bottom: 0.15rem; }
+.cp-card.done .cp-label { color: #5aa08c; }
+.cp-hash { font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; }
 .cp-hash a { color: rgba(255,255,255,0.45); text-decoration: none; }
-.cp-hash a:hover { color: #f59e0b; }
-.cp-block { font-family: 'Courier New', monospace; font-size: 0.4rem; color: rgba(255,255,255,0.2); }
+.cp-hash a:hover { color: #b0463a; }
+.cp-block { font-family: 'IBM Plex Mono', monospace; font-size: 0.4rem; color: rgba(255,255,255,0.2); }
 </style>
 </head>
 <body>
@@ -170,13 +170,13 @@ body {
 (function() {
   const mount = document.getElementById('nav-mount');
   if (!mount) return;
-  mount.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;padding:0 1.25rem;height:44px;background:rgba(8,8,20,0.97);border-bottom:1px solid rgba(255,255,255,0.06);">
+  mount.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;padding:0 1.25rem;height:44px;background:rgba(14,13,11,0.97);border-bottom:1px solid rgba(255,255,255,0.06);">
     <div style="display:flex;align-items:center;gap:0.5rem;">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
-      <span style="font-size:0.85rem;font-weight:700;letter-spacing:0.06em;color:#fff;">LOGISTIX</span>
-      <span style="font-size:0.4rem;color:rgba(245,158,11,0.6);border:1px solid rgba(245,158,11,0.2);padding:2px 6px;border-radius:9999px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;">Simulator</span>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#b0463a" stroke-width="2"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+      <span style="font-size:0.85rem;font-weight:700;letter-spacing:0.06em;color:#F3EEE4;">LOGISTIX</span>
+      <span style="font-size:0.4rem;color:rgba(155,59,48,0.9);border:1px solid rgba(155,59,48,0.4);padding:2px 6px;border-radius:9999px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;">Simulator</span>
     </div>
-    <a href="./index.html" style="font-size:0.7rem;font-weight:600;color:#f59e0b;text-decoration:none;display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:1px solid rgba(245,158,11,0.4);border-radius:8px;background:rgba(245,158,11,0.08);transition:all 0.2s;" onmouseover="this.style.background='rgba(245,158,11,0.18)';this.style.borderColor='rgba(245,158,11,0.7)'" onmouseout="this.style.background='rgba(245,158,11,0.08)';this.style.borderColor='rgba(245,158,11,0.4)'">&larr; Back to Home</a>
+    <a href="./index.html" style="font-size:0.7rem;font-weight:600;color:#c25a4d;text-decoration:none;display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:1px solid rgba(155,59,48,0.5);border-radius:8px;background:rgba(155,59,48,0.12);transition:all 0.2s;" onmouseover="this.style.background='rgba(155,59,48,0.22)';this.style.borderColor='rgba(155,59,48,0.8)'" onmouseout="this.style.background='rgba(155,59,48,0.12)';this.style.borderColor='rgba(155,59,48,0.5)'">&larr; Back to Home</a>
   </div>`;
 })();
 </script>
@@ -774,7 +774,7 @@ function renderShipments() {
         </div>
         <div class="ship-route">${s.origin} → ${s.destination}</div>
         <div class="ship-meta"><span>${s.cargo}</span><span>${s.checkpoints.length} checkpoints</span></div>
-        <div style="margin-top:0.3rem;"><a href="${DRIVER_BASE}?id=${encodeURIComponent(s.id)}" target="_blank" style="font-size:0.5rem;color:#f59e0b;text-decoration:none;">Driver Check-In →</a></div>
+        <div style="margin-top:0.3rem;"><a href="${DRIVER_BASE}?id=${encodeURIComponent(s.id)}" target="_blank" style="font-size:0.5rem;color:#c25a4d;text-decoration:none;">Driver Check-In →</a></div>
       </div>`).join('');
 }
 
