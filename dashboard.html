@@ -8,7 +8,6 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
-<script src="./config.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -281,8 +280,8 @@ const SB_NOTIFY = SB_BASE + '/logistix-notify';
 const TRACK_BASE = 'https://logistixibs.com/track.html';
 const DRIVER_BASE = 'https://logistixibs.com/driver.html';
 
-// ── LAYER 2 KEYS — loaded from config.js ──
-const LAYER2_KEYS = window.LOGISTIX_CONFIG || {};
+// ── LAYER 2 DATA — proxied by the logistix-layer2 edge function (keys stay server-side) ──
+const LAYER2 = 'https://jtifhcvbgxqwlywugvjv.supabase.co/functions/v1/logistix-layer2';
 
 // ── FREE DATA SOURCES ──
 async function fetchNOAAAlerts(lat, lon) {
@@ -302,9 +301,8 @@ async function fetchUSGSQuakes(lat, lon) {
 }
 
 async function fetchORSRoute(fromLon, fromLat, toLon, toLat) {
-  if (!LAYER2_KEYS.openRouteService) return null;
   try {
-    const res = await fetch(`https://api.openrouteservice.org/v2/directions/driving-hgv?api_key=${LAYER2_KEYS.openRouteService}&start=${fromLon},${fromLat}&end=${toLon},${toLat}`);
+    const res = await fetch(`${LAYER2}?svc=ors&from_lon=${fromLon}&from_lat=${fromLat}&to_lon=${toLon}&to_lat=${toLat}`);
     if (!res.ok) return null;
     const data = await res.json();
     const coords = data.features?.[0]?.geometry?.coordinates;
@@ -319,9 +317,8 @@ async function fetchORSRoute(fromLon, fromLat, toLon, toLat) {
 }
 
 async function fetchOWMWeather(lat, lon) {
-  if (!LAYER2_KEYS.openWeatherMap) return null;
   try {
-    const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${LAYER2_KEYS.openWeatherMap}&units=imperial`);
+    const res = await fetch(`${LAYER2}?svc=owm&lat=${lat}&lon=${lon}`);
     if (!res.ok) return null;
     const d = await res.json();
     return {
@@ -346,9 +343,9 @@ let weatherRadarLayer = null;
 let precipLayer = null;
 
 function showWeatherRadar() {
-  if (!LAYER2_KEYS.openWeatherMap || weatherRadarLayer) return;
-  precipLayer = L.tileLayer(`https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${LAYER2_KEYS.openWeatherMap}`, { maxZoom: 18, opacity: 0.5 }).addTo(map);
-  weatherRadarLayer = L.tileLayer(`https://tile.openweathermap.org/map/clouds_new/{z}/{x}/{y}.png?appid=${LAYER2_KEYS.openWeatherMap}`, { maxZoom: 18, opacity: 0.3 }).addTo(map);
+  if (weatherRadarLayer) return;
+  precipLayer = L.tileLayer(`${LAYER2}?svc=tile&layer=precipitation_new&z={z}&x={x}&y={y}`, { maxZoom: 18, opacity: 0.5 }).addTo(map);
+  weatherRadarLayer = L.tileLayer(`${LAYER2}?svc=tile&layer=clouds_new&z={z}&x={x}&y={y}`, { maxZoom: 18, opacity: 0.3 }).addTo(map);
 }
 
 function hideWeatherRadar() {
@@ -359,32 +356,9 @@ function hideWeatherRadar() {
 // ── OPENSKY CARGO FLIGHT TRACKING ──
 const CARGO_CALLSIGN_PREFIXES = ['FDX','UPS','GTI','CLX','BOX','GEC','CAL','KAL','EVA','SIA','CKS','ABW','MPH','ATN','5Y','QY'];
 
-let openSkyToken = null;
-let openSkyTokenExpiry = 0;
-
-async function getOpenSkyToken() {
-  if (openSkyToken && Date.now() < openSkyTokenExpiry) return openSkyToken;
-  if (!LAYER2_KEYS.openSkyClientId) return null;
-  try {
-    const res = await fetch('https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `grant_type=client_credentials&client_id=${LAYER2_KEYS.openSkyClientId}&client_secret=${LAYER2_KEYS.openSkyClientSecret}`,
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    openSkyToken = data.access_token;
-    openSkyTokenExpiry = Date.now() + (data.expires_in - 30) * 1000;
-    return openSkyToken;
-  } catch (e) { console.warn('OpenSky auth failed:', e); return null; }
-}
-
 async function fetchCargoFlights(minLat, minLon, maxLat, maxLon) {
-  const token = await getOpenSkyToken();
-  if (!token) return [];
   try {
-    const headers = { 'Authorization': `Bearer ${token}` };
-    const res = await fetch(`https://opensky-network.org/api/states/all?lamin=${minLat}&lomin=${minLon}&lamax=${maxLat}&lomax=${maxLon}`, { headers });
+    const res = await fetch(`${LAYER2}?svc=opensky&lamin=${minLat}&lomin=${minLon}&lamax=${maxLat}&lomax=${maxLon}`);
     if (!res.ok) return [];
     const data = await res.json();
     if (!data.states) return [];
@@ -409,9 +383,8 @@ async function fetchCargoFlights(minLat, minLon, maxLat, maxLon) {
 }
 
 async function fetchMapboxTrafficETA(fromLon, fromLat, toLon, toLat) {
-  if (!LAYER2_KEYS.mapbox) return null;
   try {
-    const res = await fetch(`https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${fromLon},${fromLat};${toLon},${toLat}?access_token=${LAYER2_KEYS.mapbox}&overview=false&annotations=congestion,duration`);
+    const res = await fetch(`${LAYER2}?svc=mapbox&from_lon=${fromLon}&from_lat=${fromLat}&to_lon=${toLon}&to_lat=${toLat}`);
     if (!res.ok) return null;
     const data = await res.json();
     const route = data.routes?.[0];
