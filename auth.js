@@ -9,7 +9,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 
 export async function authGuard() {
   const { data: { session }, error } = await supabase.auth.getSession();
-  if (error || !session) {
+  if (error || !session || !["luis", "support", "miguel"].includes(session.user.app_metadata?.role || "")) {
     window.location.replace('./login.html');
     return null;
   }
@@ -28,3 +28,10 @@ supabase.auth.onAuthStateChange((event, session) => {
     }
   }
 });
+
+// The server validates this token and its operator role before privileged work.
+export async function operatorHeaders() {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error('Sign in as a logistics operator before this action.');
+  return { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.access_token };
+}

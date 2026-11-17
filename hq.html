@@ -760,7 +760,7 @@ async function submitOrder() {
   try {
     const res = await fetch(SB_TRACK, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await (await import('./auth.js')).operatorHeaders(),
       body: JSON.stringify({ trackingCode: code }),
     });
     const data = await res.json();
@@ -813,7 +813,7 @@ async function toggleVoice() {
   btn.classList.add('active');
 
   try {
-    const tRes = await fetch(VOICE_TOKEN, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+    const tRes = await fetch(VOICE_TOKEN, { method: 'POST', headers: await (await import('./auth.js')).operatorHeaders() });
     const tData = await tRes.json();
     if (!tData.token) { btn.classList.remove('active'); return; }
 

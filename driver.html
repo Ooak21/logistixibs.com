@@ -345,7 +345,7 @@ async function startVoice() {
 
   try {
     // Get ephemeral token
-    const tokenRes = await fetch(SB_VOICE, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+    const tokenRes = await fetch(SB_VOICE, { method: 'POST', headers: await (await import('./auth.js')).operatorHeaders() });
     const tokenData = await tokenRes.json();
 
     if (!tokenData.token) {

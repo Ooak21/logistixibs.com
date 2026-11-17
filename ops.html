@@ -234,8 +234,6 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #050510; color: 
 const SB_URL = 'https://jtifhcvbgxqwlywugvjv.supabase.co';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0aWZoY3ZiZ3hxd2x5d3Vndmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1MDc5NTgsImV4cCI6MjA4ODA4Mzk1OH0.UfRVLuvM8_HPvKXUEDXb0cxR50znv16L5Tf99AnSc7g';
 const SB_SIM = SB_URL + '/functions/v1/logistix-simulate';
-const OWM_KEY = '7de9278c6029196f13803f6bee90871e';
-const ORS_KEY = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjlmMjZiNDMwMzllNjQxNGI5MTE2ZWNhZGZiZDlkYWMwIiwiaCI6Im11cm11cjY0In0=';
 const CARGO_PREFIXES = ['FDX','UPS','GTI','CLX','BOX','GEC','CAL','KAL','EVA','SIA','CKS','ABW','ATN','5Y'];
 const CONTRACT = '0x289ee93a1717fbef60add4f630ed8356b7a7e8d3';
 const SB_CORTEX = SB_URL + '/functions/v1/logistix-cortex';
@@ -280,7 +278,7 @@ window.addEventListener('resize', () => map.invalidateSize());
 
 // ── LAYERS ──
 let layers = {
-  weather: L.tileLayer(`https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${OWM_KEY}`, { maxZoom: 18, opacity: 0.4 }).addTo(map),
+  weather: null, // Paused until weather tiles are served through an authenticated backend.
   sea: null,
   rail: null,
   flights: true,
@@ -291,7 +289,7 @@ function toggleLayer(name, btn) {
   btn.classList.toggle('active');
   if (name === 'weather') {
     if (layers.weather) { map.removeLayer(layers.weather); layers.weather = null; }
-    else { layers.weather = L.tileLayer(`https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${OWM_KEY}`, { maxZoom: 18, opacity: 0.4 }).addTo(map); }
+    else { console.info('Weather overlay is paused pending secure backend routing.'); }
   }
   if (name === 'sea') {
     if (layers.sea) { map.removeLayer(layers.sea); layers.sea = null; }
@@ -480,7 +478,7 @@ async function addTrackedShipment() {
   try {
     const res = await fetch(SB_TRACK, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await (await import('./auth.js')).operatorHeaders(),
       body: JSON.stringify({ trackingCode: code }),
     });
     const data = await res.json();

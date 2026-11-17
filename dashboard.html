@@ -867,7 +867,7 @@ async function sendNotify(params) {
 async function recordCP(shipmentId, eventType, location, bundle, retries = 2) {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      const res = await fetch(SB_SIM, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ shipmentId, eventType, location, bundle }) });
+      const res = await fetch(SB_SIM, { method: 'POST', headers: await (await import('./auth.js')).operatorHeaders(), body: JSON.stringify({ shipmentId, eventType, location, bundle }) });
       if (res.ok) return res.json();
       const errText = await res.text();
       if (attempt < retries) {
