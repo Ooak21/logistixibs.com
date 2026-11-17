@@ -260,7 +260,7 @@ async function sendCortexQuery() {
   try {
     const res = await fetch(SB_CORTEX, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await (await import('./auth.js')).operatorHeaders(),
       body: JSON.stringify({ message: msg }),
     });
     const data = await res.json();

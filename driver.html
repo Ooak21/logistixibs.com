@@ -311,7 +311,7 @@ Give me:
 Keep it brief and actionable — I'm on the road.`;
 
   try {
-    const res = await fetch(SB_CORTEX, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message }) });
+    const res = await fetch(SB_CORTEX, { method: 'POST', headers: await (await import('./auth.js')).operatorHeaders(), body: JSON.stringify({ message }) });
     const data = await res.json();
     resp.textContent = data.response || 'No response from CORTEX.';
   } catch (e) {

@@ -640,7 +640,7 @@ async function fetchCortexInsight(s) {
     const cps = s.checkpoints || [];
     const last3 = cps.slice(-3).map(c => c.message || c.status).join('; ');
     const msg = `Analyze this shipment in 2 sentences. Flag any risk. Tracking: ${s.tracking_code}, Carrier: ${s.carrier}, Status: ${s.status}, Cargo: ${s.cargo_category || 'general'}, Checkpoints: ${last3 || 'none'}, ETA: ${s.est_delivery || 'unknown'}`;
-    const res = await fetch(SB_CORTEX, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg }) });
+    const res = await fetch(SB_CORTEX, { method: 'POST', headers: await (await import('./auth.js')).operatorHeaders(), body: JSON.stringify({ message: msg }) });
     const data = await res.json();
     const el = document.getElementById('cortexInsight');
     if (el) el.textContent = data.response || 'No analysis available.';
@@ -657,7 +657,7 @@ async function loadBriefing() {
   const exceptions = allShipments.filter(s => s.status === 'failure').length;
   try {
     const msg = `In one sentence (15 words max): briefing for ${total} shipments, ${transit} in transit, ${exceptions} exceptions. Be direct.`;
-    const res = await fetch(SB_CORTEX, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg }) });
+    const res = await fetch(SB_CORTEX, { method: 'POST', headers: await (await import('./auth.js')).operatorHeaders(), body: JSON.stringify({ message: msg }) });
     const data = await res.json();
     document.getElementById('kAlert').textContent = data.response || `${total} shipments tracked. ${exceptions} need attention.`;
   } catch {
@@ -686,7 +686,7 @@ async function fetchFleetBriefing() {
   const exDetails = allShipments.filter(s => s.status === 'failure').map(s => `${s.carrier} ${s.tracking_code}: ${(s.checkpoints||[]).slice(-1)[0]?.message||s.status}`).join('; ');
   try {
     const msg = `Full operations briefing. Carrier shipments: ${total} total, ${transit} transit, ${exceptions} exceptions. ${exDetails ? 'Exceptions: ' + exDetails : 'No exceptions.'} Also include any live tracked flights from LAS in your briefing — check the flight data in your system prompt. Give me 4-5 sentences covering both carrier shipments and live flights. Be direct.`;
-    const res = await fetch(SB_CORTEX, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg }) });
+    const res = await fetch(SB_CORTEX, { method: 'POST', headers: await (await import('./auth.js')).operatorHeaders(), body: JSON.stringify({ message: msg }) });
     const data = await res.json();
     const el = document.getElementById('cortexInsight');
     if (el) el.textContent = data.response || 'No briefing available.';
@@ -704,7 +704,7 @@ async function sendHqCortex() {
   const el = document.getElementById('cortexInsight');
   if (el) el.textContent = 'Analyzing...';
   try {
-    const res = await fetch(SB_CORTEX, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg }) });
+    const res = await fetch(SB_CORTEX, { method: 'POST', headers: await (await import('./auth.js')).operatorHeaders(), body: JSON.stringify({ message: msg }) });
     const data = await res.json();
     if (el) el.textContent = data.response || 'No response.';
   } catch (e) {

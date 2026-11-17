@@ -805,7 +805,7 @@ async function sendCortex() {
   msgs.scrollTop = msgs.scrollHeight;
   document.getElementById('cortexSendBtn').disabled = true;
   try {
-    const res = await fetch(SB_CORTEX, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg }) });
+    const res = await fetch(SB_CORTEX, { method: 'POST', headers: await (await import('./auth.js')).operatorHeaders(), body: JSON.stringify({ message: msg }) });
     const data = await res.json();
     document.getElementById('cortexLoading')?.remove();
     msgs.innerHTML += `<div class="cmsg assistant">${esc(data.response || data.error || 'No response')}</div>`;
@@ -860,7 +860,7 @@ function copyShipmentId() {
 
 async function sendNotify(params) {
   try {
-    await fetch(SB_NOTIFY, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(params) });
+    await fetch(SB_NOTIFY, { method: 'POST', headers: await (await import('./auth.js')).operatorHeaders(), body: JSON.stringify(params) });
   } catch (e) { console.warn('Notify failed:', e); }
 }
 
