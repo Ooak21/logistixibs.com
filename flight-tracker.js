@@ -241,7 +241,7 @@ async function pollFlight(flight) {
 
     await fetch(`${FLIGHT_REST}?id=eq.${flight.id}`, {
       method: 'PATCH',
-      headers: { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      headers: { 'apikey': SB_ANON, ...await (await import('./auth.js')).operatorHeaders(), 'Prefer': 'return=minimal' },
       body: JSON.stringify({ current_lat: flight.currentLat, current_lon: flight.currentLon, current_alt_m: flight.currentAlt, current_heading: flight.currentHeading, current_speed: flight.currentSpeed, on_ground: flight.onGround, last_seen_at: new Date().toISOString(), updated_at: new Date().toISOString() }),
     });
 
@@ -294,7 +294,7 @@ async function fireFlightCheckpoint(flight, key, eventType, lat, lon, label) {
     flight.checkpointsFired[key] = txData;
 
     await fetch(`${FLIGHT_REST}?id=eq.${flight.id}`, {
-      method: 'PATCH', headers: { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      method: 'PATCH', headers: { 'apikey': SB_ANON, ...await (await import('./auth.js')).operatorHeaders(), 'Prefer': 'return=minimal' },
       body: JSON.stringify({ checkpoints_fired: flight.checkpointsFired }),
     });
 
@@ -313,7 +313,7 @@ async function fireFlightCheckpoint(flight, key, eventType, lat, lon, label) {
 async function updateFlightStatus(flight, status, extra) {
   flight.status = status;
   await fetch(`${FLIGHT_REST}?id=eq.${flight.id}`, {
-    method: 'PATCH', headers: { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    method: 'PATCH', headers: { 'apikey': SB_ANON, ...await (await import('./auth.js')).operatorHeaders(), 'Prefer': 'return=minimal' },
     body: JSON.stringify({ status, updated_at: new Date().toISOString(), ...extra }),
   });
 }
@@ -362,7 +362,7 @@ async function commitFlight() {
 
   try {
     const res = await fetch(COMMIT_URL, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: await (await import('./auth.js')).operatorHeaders(),
       body: JSON.stringify({
         icao24: candidate.flight_iata, callsign: candidate.flight_iata,
         originLat, originLon, originName: 'Las Vegas (LAS)',
