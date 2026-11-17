@@ -278,18 +278,76 @@ window.addEventListener('resize', () => map.invalidateSize());
 
 // ── LAYERS ──
 let layers = {
-  weather: null, // Paused until weather tiles are served through an authenticated backend.
+  weather: null,
   sea: null,
   rail: null,
   flights: true,
 };
 let flightMarkers = [];
 
+const WEATHER_DATA = SB_URL + '/functions/v1/logistix-map-data';
+function weatherUnavailable() {
+  const button = document.getElementById('ctrlWeather');
+  button.classList.remove('active');
+  button.textContent = 'Weather Radar · unavailable';
+  button.title = 'Weather radar is unavailable. Try again later.';
+  if (layers.weather) { map.removeLayer(layers.weather); layers.weather = null; }
+  if (!document.getElementById('weatherUnavailable')) {
+    const note = document.createElement('div');
+    note.id = 'weatherUnavailable';
+    note.className = 'ops-feed-card';
+    note.setAttribute('role', 'status');
+    note.textContent = 'Weather radar is unavailable. Try again later.';
+    document.getElementById('opsFeed')?.appendChild(note);
+  }
+}
+function createWeatherLayer() {
+  const WeatherTiles = L.GridLayer.extend({
+    createTile(coords, done) {
+      const tile = document.createElement('img');
+      tile.alt = '';
+      const controller = new AbortController();
+      tile._weatherAbort = controller;
+      (async () => {
+        const headers = await (await import('./auth.js')).operatorHeaders();
+        const response = await fetch(WEATHER_DATA, {
+          method: 'POST', headers, signal: controller.signal,
+          body: JSON.stringify({ z: coords.z, x: coords.x, y: coords.y }),
+        });
+        if (!response.ok) throw new Error('Weather unavailable');
+        const blob = await response.blob();
+        if (blob.type !== 'image/png') throw new Error('Weather unavailable');
+        tile._weatherUrl = URL.createObjectURL(blob);
+        tile.onload = () => { URL.revokeObjectURL(tile._weatherUrl); tile._weatherUrl = null; done(null, tile); };
+        tile.onerror = () => { URL.revokeObjectURL(tile._weatherUrl); tile._weatherUrl = null; done(new Error('Weather unavailable'), tile); weatherUnavailable(); };
+        tile.src = tile._weatherUrl;
+      })().catch((error) => {
+        if (controller.signal.aborted) return;
+        done(error, tile);
+        weatherUnavailable();
+      });
+      return tile;
+    },
+  });
+  const layer = new WeatherTiles({ maxZoom: 18, opacity: 0.4 });
+  layer.on('tileunload', ({ tile }) => {
+    tile._weatherAbort?.abort();
+    if (tile._weatherUrl) URL.revokeObjectURL(tile._weatherUrl);
+  });
+  return layer;
+}
+layers.weather = createWeatherLayer().addTo(map);
+
 function toggleLayer(name, btn) {
   btn.classList.toggle('active');
   if (name === 'weather') {
     if (layers.weather) { map.removeLayer(layers.weather); layers.weather = null; }
-    else { console.info('Weather overlay is paused pending secure backend routing.'); }
+    else {
+      btn.textContent = 'Weather Radar';
+      btn.title = '';
+      document.getElementById('weatherUnavailable')?.remove();
+      layers.weather = createWeatherLayer().addTo(map);
+    }
   }
   if (name === 'sea') {
     if (layers.sea) { map.removeLayer(layers.sea); layers.sea = null; }
