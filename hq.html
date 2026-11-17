@@ -311,6 +311,11 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
 </button>
 
 <script>
+// Encode stored text for HTML; encode complete JSON literals separately for inline handlers.
+function logistixHtml(value) { return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
+function logistixJsArg(value) { return logistixHtml(JSON.stringify(value)); }
+function logistixTx(value) { return typeof value === 'string' && /^0x[0-9a-f]{64}$/i.test(value) ? value : ''; }
+
 const SB_URL = 'https://jtifhcvbgxqwlywugvjv.supabase.co';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0aWZoY3ZiZ3hxd2x5d3Vndmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1MDc5NTgsImV4cCI6MjA4ODA4Mzk1OH0.UfRVLuvM8_HPvKXUEDXb0cxR50znv16L5Tf99AnSc7g';
 const SB_TRACK = SB_URL + '/functions/v1/logistix-track-create';
@@ -420,7 +425,7 @@ function renderCarrierScores() {
   document.getElementById('intelCarrier').innerHTML = sorted.map(([name, d]) => {
     const score = Math.round((d.ok / d.total) * 100);
     const color = score >= 85 ? 'var(--green)' : score >= 70 ? 'var(--amber)' : 'var(--red)';
-    return `<div class="icard-row"><span style="font-size:0.5rem;min-width:50px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name.slice(0,12)}</span><div class="icard-bar"><div class="icard-bar-fill" style="width:${score}%;background:${color}"></div></div><span class="icard-score" style="color:${color}">${score}</span></div>`;
+    return `<div class="icard-row"><span style="font-size:0.5rem;min-width:50px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${logistixHtml(name.slice(0,12))}</span><div class="icard-bar"><div class="icard-bar-fill" style="width:${score}%;background:${color}"></div></div><span class="icard-score" style="color:${color}">${score}</span></div>`;
   }).join('');
 }
 
@@ -436,7 +441,7 @@ function renderExceptionPatterns() {
   const sorted = Object.entries(locations).sort((a, b) => b[1] - a[1]).slice(0, 4);
   if (sorted.length === 0) { document.getElementById('intelExceptions').innerHTML = '<div class="icard-sub">No exceptions</div>'; return; }
   document.getElementById('intelExceptions').innerHTML = sorted.map(([loc, count]) =>
-    `<div class="icard-list-item"><span style="color:var(--muted)">${loc}</span><span class="icard-list-count">${count}</span></div>`
+    `<div class="icard-list-item"><span style="color:var(--muted)">${logistixHtml(loc)}</span><span class="icard-list-count">${count}</span></div>`
   ).join('');
 }
 
@@ -470,7 +475,7 @@ function renderDelayRisk() {
   });
   if (atRisk.length === 0) { document.getElementById('intelDelay').innerHTML = '<div class="icard-sub" style="color:var(--green)">All shipments on schedule</div>'; return; }
   document.getElementById('intelDelay').innerHTML = `<div style="font-size:0.55rem;color:var(--red);font-weight:700;margin-bottom:0.2rem">${atRisk.length} at risk</div>` +
-    atRisk.slice(0, 4).map(s => `<div class="icard-risk-item"><span style="font-family:monospace;color:var(--muted)">${(s.tracking_code || '').slice(0, 14)}</span><span style="color:var(--red)">${s.carrier || '?'}</span></div>`).join('');
+    atRisk.slice(0, 4).map(s => `<div class="icard-risk-item"><span style="font-family:monospace;color:var(--muted)">${logistixHtml((s.tracking_code || '').slice(0, 14))}</span><span style="color:var(--red)">${logistixHtml(s.carrier || '?')}</span></div>`).join('');
 }
 
 // ── ORDER LIST ──
@@ -531,17 +536,17 @@ function renderOrderList() {
     const age = s.created_at ? timeSince(s.created_at) : '—';
     const sel = s.id === selectedId ? ' selected' : '';
 
-    return `<div class="orow${sel}" onclick="selectShipment('${s.id}')">
+    return `<div class="orow${sel}" onclick="selectShipment(${logistixJsArg(s.id)})">
       <div class="orow-dot" style="background:${dotColor}"></div>
-      <div class="orow-id">${s.tracking_code || s.id?.slice(0,10) || '—'}</div>
+      <div class="orow-id">${logistixHtml(s.tracking_code || s.id?.slice(0,10) || '—')}</div>
       <div><span class="orow-tag" style="color:${cargo.color};background:${cargo.bg}">${cargo.label}</span></div>
-      <div class="orow-carrier">${s.carrier || '—'}</div>
-      <div class="orow-route">${origin} → ${dest}</div>
+      <div class="orow-carrier">${logistixHtml(s.carrier || '—')}</div>
+      <div class="orow-route">${logistixHtml(origin)} → ${logistixHtml(dest)}</div>
       <div class="orow-eta" style="${etaPast ? 'color:var(--red)' : ''}">${eta}</div>
-      <div><span class="orow-tag" style="color:${dotColor};background:${dotColor}22">${(STATUS_LABELS[s.status] || s.status || '').slice(0,10)}</span></div>
-      <div class="orow-event">${lastMsg.slice(0, 28)}</div>
+      <div><span class="orow-tag" style="color:${dotColor};background:${dotColor}22">${logistixHtml((STATUS_LABELS[s.status] || s.status || '').slice(0,10))}</span></div>
+      <div class="orow-event">${logistixHtml(lastMsg.slice(0, 28))}</div>
       <div class="orow-age">${age}</div>
-      <div class="orow-chain">${s.last_anchor_tx ? `<a href="https://sepolia.basescan.org/tx/${s.last_anchor_tx}" target="_blank" onclick="event.stopPropagation()">⬡</a>` : '<span style="color:var(--dim)">—</span>'}</div>
+      <div class="orow-chain">${logistixTx(s.last_anchor_tx) ? `<a href="https://sepolia.basescan.org/tx/${logistixTx(s.last_anchor_tx)}" target="_blank" onclick="event.stopPropagation()">⬡</a>` : '<span style="color:var(--dim)">—</span>'}</div>
     </div>`;
   }).join('');
 }
@@ -577,7 +582,7 @@ function renderDetail(s) {
         const loc = cp.tracking_location;
         if (loc?.city) {
           L.circleMarker([loc.latitude || 38, loc.longitude || -98], { radius: 5, color: STATUS_COLORS[s.status] || '#f59e0b', fillOpacity: 0.8, weight: 1 })
-            .addTo(detailMap).bindTooltip(`${loc.city}, ${loc.state || ''}`);
+            .addTo(detailMap).bindTooltip(`${logistixHtml(loc.city)}, ${logistixHtml(loc.state || '')}`);
         }
       });
       detailMap.invalidateSize();
@@ -597,13 +602,13 @@ function renderDetail(s) {
 
   let html = `
     <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.5rem">
-      <span class="orow-tag" style="color:${dotColor};background:${dotColor}22;font-size:0.45rem">${STATUS_LABELS[s.status] || s.status}</span>
+      <span class="orow-tag" style="color:${dotColor};background:${dotColor}22;font-size:0.45rem">${logistixHtml(STATUS_LABELS[s.status] || s.status)}</span>
       <span class="orow-tag" style="color:${cargo.color};background:${cargo.bg};font-size:0.45rem">${cargo.label}</span>
     </div>
-    <div style="font-family:monospace;font-size:0.6rem;color:var(--muted);margin-bottom:0.5rem;word-break:break-all">${s.tracking_code || s.id || ''}</div>
-    <div class="dfield"><span class="dfield-key">Carrier</span><span class="dfield-val">${s.carrier || '—'}</span></div>
-    <div class="dfield"><span class="dfield-key">Client</span><span class="dfield-val">${s.client_name || '—'}</span></div>
-    <div class="dfield"><span class="dfield-key">ETA</span><span class="dfield-val">${s.est_delivery || '—'}</span></div>`;
+    <div style="font-family:monospace;font-size:0.6rem;color:var(--muted);margin-bottom:0.5rem;word-break:break-all">${logistixHtml(s.tracking_code || s.id || '')}</div>
+    <div class="dfield"><span class="dfield-key">Carrier</span><span class="dfield-val">${logistixHtml(s.carrier || '—')}</span></div>
+    <div class="dfield"><span class="dfield-key">Client</span><span class="dfield-val">${logistixHtml(s.client_name || '—')}</span></div>
+    <div class="dfield"><span class="dfield-key">ETA</span><span class="dfield-val">${logistixHtml(s.est_delivery || '—')}</span></div>`;
 
   if (s.total_cost) html += `<div class="dfield"><span class="dfield-key">Cost</span><span class="dfield-val">$${Number(s.total_cost).toLocaleString()}</span></div>`;
   if (s.estimated_miles) html += `<div class="dfield"><span class="dfield-key">Distance</span><span class="dfield-val">${Number(s.estimated_miles).toLocaleString()} mi</span></div>`;
@@ -620,16 +625,16 @@ function renderDetail(s) {
       const locStr = loc ? [loc.city, loc.state].filter(Boolean).join(', ') : '';
       const time = cp.datetime ? new Date(cp.datetime).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
       return `<div class="dcp">
-        <div style="display:flex;justify-content:space-between"><span class="dcp-type" style="color:${dotColor}">${cp.status || cp.message || 'Update'}</span><span class="dcp-time">${time}</span></div>
-        ${cp.message ? `<div class="dcp-msg">${cp.message}</div>` : ''}
-        ${locStr ? `<div class="dcp-loc">${locStr}</div>` : ''}
+        <div style="display:flex;justify-content:space-between"><span class="dcp-type" style="color:${dotColor}">${logistixHtml(cp.status || cp.message || 'Update')}</span><span class="dcp-time">${time}</span></div>
+        ${cp.message ? `<div class="dcp-msg">${logistixHtml(cp.message)}</div>` : ''}
+        ${locStr ? `<div class="dcp-loc">${logistixHtml(locStr)}</div>` : ''}
       </div>`;
     }).join('');
   }
 
-  if (s.last_anchor_tx) {
+  if (logistixTx(s.last_anchor_tx)) {
     html += `<div class="ddivider"></div><div class="dsection">On-Chain</div>
-      <div class="dcp-tx"><a href="https://sepolia.basescan.org/tx/${s.last_anchor_tx}" target="_blank" style="color:var(--blue);font-size:0.5rem;text-decoration:none;font-family:monospace">${s.last_anchor_tx.slice(0,20)}...${s.last_anchor_tx.slice(-6)}</a></div>`;
+      <div class="dcp-tx"><a href="https://sepolia.basescan.org/tx/${logistixTx(s.last_anchor_tx)}" target="_blank" style="color:var(--blue);font-size:0.5rem;text-decoration:none;font-family:monospace">${s.last_anchor_tx.slice(0,20)}...${s.last_anchor_tx.slice(-6)}</a></div>`;
   }
 
   body.innerHTML = html;
@@ -734,7 +739,7 @@ function renderFeed() {
     const isException = ev.shipment.status === 'failure';
     card.className = 'feed-card' + (isException ? ' exception' : '');
     const route = (ev.shipment.carrier || '?') + ' · ' + (ev.shipment.tracking_code || '').slice(0, 10);
-    card.innerHTML = `<div class="feed-type">${ev.cp.status || ev.cp.message || 'Update'}</div><div class="feed-route">${route}</div>`;
+    card.innerHTML = `<div class="feed-type">${logistixHtml(ev.cp.status || ev.cp.message || 'Update')}</div><div class="feed-route">${logistixHtml(route)}</div>`;
     card.onclick = () => selectShipment(ev.shipment.id);
     feed.appendChild(card);
   });

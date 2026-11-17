@@ -273,6 +273,11 @@ body {
 </div>
 
 <script>
+// Encode stored text for HTML; encode complete JSON literals separately for inline handlers.
+function logistixHtml(value) { return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
+function logistixJsArg(value) { return logistixHtml(JSON.stringify(value)); }
+function logistixTx(value) { return typeof value === 'string' && /^0x[0-9a-f]{64}$/i.test(value) ? value : ''; }
+
 const SB_BASE = 'https://jtifhcvbgxqwlywugvjv.supabase.co/functions/v1';
 const SB_SIM = SB_BASE + '/logistix-simulate';
 const SB_CORTEX = SB_BASE + '/logistix-cortex';
@@ -740,13 +745,13 @@ function renderShipments() {
   list.innerHTML = filtered.length === 0
     ? '<div style="padding:2rem; text-align:center; color:rgba(255,255,255,0.2); font-size:0.65rem;">No shipments yet. Run a simulation.</div>'
     : filtered.map(s => `
-      <div class="ship-item ${selectedShipment?.id===s.id?'selected':''}" onclick="selectShipment('${s.id}')">
+      <div class="ship-item ${selectedShipment?.id===s.id?'selected':''}" onclick="selectShipment(${logistixJsArg(s.id)})">
         <div style="display:flex;justify-content:space-between;align-items:center;">
-          <div class="ship-id">${s.id.slice(0,10)}...${s.id.slice(-4)}</div>
-          <span class="ship-badge ${s.status}">${s.status.replace('_',' ')}</span>
+          <div class="ship-id">${logistixHtml(s.id.slice(0,10))}...${logistixHtml(s.id.slice(-4))}</div>
+          <span class="ship-badge ${logistixHtml(s.status)}">${logistixHtml(s.status.replace('_',' '))}</span>
         </div>
-        <div class="ship-route">${s.origin} → ${s.destination}</div>
-        <div class="ship-meta"><span>${s.cargo}</span><span>${s.checkpoints.length} checkpoints</span></div>
+        <div class="ship-route">${logistixHtml(s.origin)} → ${logistixHtml(s.destination)}</div>
+        <div class="ship-meta"><span>${logistixHtml(s.cargo)}</span><span>${s.checkpoints.length} checkpoints</span></div>
         <div style="margin-top:0.3rem;"><a href="${DRIVER_BASE}?id=${encodeURIComponent(s.id)}" target="_blank" style="font-size:0.5rem;color:#c25a4d;text-decoration:none;">Driver Check-In →</a></div>
       </div>`).join('');
 }
@@ -766,7 +771,7 @@ function showShipmentOnMap(s) {
   pts.forEach((p, i) => {
     const cp = s.checkpoints[i];
     const color = cp.eventLabel === 'DELIVERED' ? '#34d399' : cp.type === 3 ? '#f59e0b' : cp.type === 2 ? '#8b5cf6' : '#60a5fa';
-    mapMarkers.push(L.circleMarker(p, { radius: 5, color, fillColor: color, fillOpacity: 0.8, weight: 1 }).addTo(map).bindTooltip(cp.eventLabel + ': ' + cp.locName, { direction: 'top' }));
+    mapMarkers.push(L.circleMarker(p, { radius: 5, color, fillColor: color, fillOpacity: 0.8, weight: 1 }).addTo(map).bindTooltip(logistixHtml(cp.eventLabel + ': ' + cp.locName), { direction: 'top' }));
   });
   map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
 }
@@ -781,14 +786,14 @@ function renderChainOps() {
   const s = selectedShipment;
   el.innerHTML = `
     <div class="chain-section" style="border-bottom:1px solid rgba(255,255,255,0.06);"><div class="chain-label">Contract</div><a class="chain-link" href="https://sepolia.basescan.org/address/0x289ee93a1717fbef60add4f630ed8356b7a7e8d3" target="_blank">0x289ee9...e8d3</a></div>
-    <div class="chain-section" style="border-bottom:1px solid rgba(255,255,255,0.06);"><div class="chain-label">Shipment Hash</div><div class="chain-mono">${s.id}</div></div>
+    <div class="chain-section" style="border-bottom:1px solid rgba(255,255,255,0.06);"><div class="chain-label">Shipment Hash</div><div class="chain-mono">${logistixHtml(s.id)}</div></div>
     <div class="chain-section"><div class="chain-label">On-Chain Checkpoints (${s.checkpoints.length})</div>
     ${s.checkpoints.map(cp => {
       const cls = cp.type===5?'green':cp.type===3?'amber':cp.type===2?'purple':cp.type===1?'blue':'gray';
-      return `<div class="chain-cp"><div class="chain-cp-type ${cls}">${cp.eventLabel}</div>
-        <div class="chain-cp-row"><span class="chain-cp-key">Location</span><span class="chain-cp-val">${cp.locName}</span></div>
-        <div class="chain-cp-row"><span class="chain-cp-key">Block</span><span class="chain-cp-val">#${cp.blockNumber}</span></div>
-        <div class="chain-cp-row"><span class="chain-cp-key">Tx</span><span class="chain-cp-val"><a class="chain-link" href="https://sepolia.basescan.org/tx/${cp.txHash}" target="_blank">${cp.txHash.slice(0,14)}...${cp.txHash.slice(-6)}</a></span></div>
+      return `<div class="chain-cp"><div class="chain-cp-type ${cls}">${logistixHtml(cp.eventLabel)}</div>
+        <div class="chain-cp-row"><span class="chain-cp-key">Location</span><span class="chain-cp-val">${logistixHtml(cp.locName)}</span></div>
+        <div class="chain-cp-row"><span class="chain-cp-key">Block</span><span class="chain-cp-val">#${logistixHtml(cp.blockNumber)}</span></div>
+        <div class="chain-cp-row"><span class="chain-cp-key">Tx</span><span class="chain-cp-val"><a class="chain-link" href="https://sepolia.basescan.org/tx/${logistixTx(cp.txHash)}" target="_blank">${logistixHtml(cp.txHash.slice(0,14))}...${logistixHtml(cp.txHash.slice(-6))}</a></span></div>
         <button class="verify-btn" onclick="this.classList.toggle('verified');this.textContent=this.classList.contains('verified')?'✓ Hash Verified':'Verify Data Integrity'">Verify Data Integrity</button></div>`;
     }).join('')}</div>`;
 }

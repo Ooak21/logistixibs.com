@@ -1,3 +1,8 @@
+// Encode stored text for HTML; encode complete JSON literals separately for inline handlers.
+function logistixHtml(value) { return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
+function logistixJsArg(value) { return logistixHtml(JSON.stringify(value)); }
+function logistixTx(value) { return typeof value === 'string' && /^0x[0-9a-f]{64}$/i.test(value) ? value : ''; }
+
 // LOGISTIX Real-Time Flight Tracker (Airlabs via Vercel proxy)
 // Depends on globals from ops.html: SB_URL, SB_ANON, SB_SIM, map, vehicleIcon, dotColors, bearing, gcArc
 
@@ -99,13 +104,13 @@ function renderFlightOnMap(flight) {
 
     // Origin airport marker + geofence
     L.circleMarker([flight.origin.lat, flight.origin.lon], { radius: 5, color: '#f59e0b', fillColor: '#f59e0b', fillOpacity: 0.7, weight: 1 })
-      .addTo(map).bindPopup(`<div class="cp-popup"><div class="cp-popup-type" style="color:#f59e0b">ORIGIN</div><div class="cp-popup-desc">${flight.origin.name}</div></div>`);
+      .addTo(map).bindPopup(`<div class="cp-popup"><div class="cp-popup-type" style="color:#f59e0b">ORIGIN</div><div class="cp-popup-desc">${logistixHtml(flight.origin.name)}</div></div>`);
     L.circle([flight.origin.lat, flight.origin.lon], { radius: GEOFENCE_RADIUS_KM * 1000, color: '#f59e0b', fillColor: '#f59e0b', fillOpacity: 0.04, weight: 1.5, dashArray: '6 4', interactive: false }).addTo(map);
 
     // Destination airport marker + geofence
     if (flight.dest.lat && flight.dest.lon) {
       L.circleMarker([flight.dest.lat, flight.dest.lon], { radius: 5, color: '#34d399', fillColor: '#34d399', fillOpacity: 0.7, weight: 1 })
-        .addTo(map).bindPopup(`<div class="cp-popup"><div class="cp-popup-type" style="color:#34d399">DESTINATION</div><div class="cp-popup-desc">${flight.dest.name}</div></div>`);
+        .addTo(map).bindPopup(`<div class="cp-popup"><div class="cp-popup-type" style="color:#34d399">DESTINATION</div><div class="cp-popup-desc">${logistixHtml(flight.dest.name)}</div></div>`);
       L.circle([flight.dest.lat, flight.dest.lon], { radius: GEOFENCE_RADIUS_KM * 1000, color: '#34d399', fillColor: '#34d399', fillOpacity: 0.04, weight: 1.5, dashArray: '6 4', interactive: false }).addTo(map);
     }
 
@@ -124,7 +129,7 @@ function renderFlightOnMap(flight) {
     flight.marker = L.marker([lat, lon], { icon: vehicleIcon('air', color, hdg), zIndexOffset: 2000 }).addTo(map);
     flight.marker.on('click', () => openFlightSidebar(flight));
 
-    flight.label = L.marker([lat, lon], { icon: L.divIcon({ className: '', html: `<div style="font-size:10px;color:${color};font-family:Inter,sans-serif;font-weight:600;white-space:nowrap;text-shadow:0 1px 4px rgba(0,0,0,0.9);text-align:center;pointer-events:none;">${flight.flightIata}<br><span style="font-size:8px;font-weight:400;opacity:0.7">${flight.status === 'completed' ? 'ARRIVED' : 'LIVE'}</span></div>`, iconSize: [100, 28], iconAnchor: [50, -14] })}).addTo(map);
+    flight.label = L.marker([lat, lon], { icon: L.divIcon({ className: '', html: `<div style="font-size:10px;color:${color};font-family:Inter,sans-serif;font-weight:600;white-space:nowrap;text-shadow:0 1px 4px rgba(0,0,0,0.9);text-align:center;pointer-events:none;">${logistixHtml(flight.flightIata)}<br><span style="font-size:8px;font-weight:400;opacity:0.7">${flight.status === 'completed' ? 'ARRIVED' : 'LIVE'}</span></div>`, iconSize: [100, 28], iconAnchor: [50, -14] })}).addTo(map);
 
     if (flight.status === 'completed') { flight.marker.setOpacity(0.5); flight.label.setOpacity(0.5); }
   } catch (e) { console.warn('renderFlightOnMap error for', flight.flightIata, e); }
@@ -152,7 +157,7 @@ function openFlightSidebar(flight) {
   const cpHtml = cpDefs.map(def => {
     const cp = flight.checkpointsFired[def.key];
     if (!cp || cp.pending) return `<div class="ops-sid-cp" style="opacity:0.3"><div class="ops-sid-cp-icon" style="background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.06)">${def.icon}</div><div class="ops-sid-cp-info"><div class="ops-sid-cp-type" style="color:rgba(255,255,255,0.25)">${def.label}</div><div class="ops-sid-cp-desc">${def.pending}</div></div></div>`;
-    return `<div class="ops-sid-cp"><div class="ops-sid-cp-icon" style="background:${def.color}15;color:${def.color};border:1px solid ${def.color}33">${def.icon}</div><div class="ops-sid-cp-info"><div class="ops-sid-cp-type" style="color:${def.color}">${def.label}</div><div class="ops-sid-cp-desc">${def.desc}</div>${cp.txHash ? `<div class="ops-sid-cp-tx"><a href="https://sepolia.basescan.org/tx/${cp.txHash}" target="_blank">TX: ${cp.txHash.slice(0,14)}...${cp.txHash.slice(-6)}</a></div>` : ''}</div></div>`;
+    return `<div class="ops-sid-cp"><div class="ops-sid-cp-icon" style="background:${def.color}15;color:${def.color};border:1px solid ${def.color}33">${def.icon}</div><div class="ops-sid-cp-info"><div class="ops-sid-cp-type" style="color:${def.color}">${def.label}</div><div class="ops-sid-cp-desc">${logistixHtml(def.desc)}</div>${logistixTx(cp.txHash) ? `<div class="ops-sid-cp-tx"><a href="https://sepolia.basescan.org/tx/${logistixTx(cp.txHash)}" target="_blank">TX: ${cp.txHash.slice(0,14)}...${cp.txHash.slice(-6)}</a></div>` : ''}</div></div>`;
   }).join('');
 
   document.getElementById('opsSidebarContent').innerHTML = `
@@ -160,8 +165,8 @@ function openFlightSidebar(flight) {
       <div class="ops-sid-hero-top">
         <div class="ops-sid-icon" style="background:${color}15;border:1.5px solid ${color}44;">${VEHICLE_SVGS.air.replace(/COLOR/g, color).replace(/width="\d+"/, 'width="24"').replace(/height="\d+"/, 'height="24"')}</div>
         <div class="ops-sid-hero-info">
-          <div class="ops-sid-carrier">${flight.flightIata} <span style="font-size:0.55rem;color:rgba(255,255,255,0.4)">${flight.metadata?.airline || ''}</span></div>
-          <div class="ops-sid-route-label">${flight.origin.name} → ${flight.dest.name}</div>
+          <div class="ops-sid-carrier">${logistixHtml(flight.flightIata)} <span style="font-size:0.55rem;color:rgba(255,255,255,0.4)">${logistixHtml(flight.metadata?.airline || '')}</span></div>
+          <div class="ops-sid-route-label">${logistixHtml(flight.origin.name)} → ${logistixHtml(flight.dest.name)}</div>
         </div>
       </div>
       <div class="ops-sid-tags">
@@ -171,7 +176,7 @@ function openFlightSidebar(flight) {
       </div>
       <div class="ops-sid-progress">
         <div class="ops-sid-bar"><div class="ops-sid-bar-fill" style="width:${pct}%;background:${color}"></div></div>
-        <div class="ops-sid-bar-labels"><span>${flight.origin.name.split('(')[0].trim()}</span><span>${pct}%</span><span>${flight.dest.name.split('(')[0].trim()}</span></div>
+        <div class="ops-sid-bar-labels"><span>${logistixHtml(flight.origin.name.split('(')[0].trim())}</span><span>${pct}%</span><span>${logistixHtml(flight.dest.name.split('(')[0].trim())}</span></div>
       </div>
     </div>
     <div class="ops-sid-body">
@@ -302,7 +307,7 @@ async function fireFlightCheckpoint(flight, key, eventType, lat, lon, label) {
     if (feedEl) {
       const card = document.createElement('div');
       card.className = 'ops-feed-card new';
-      card.innerHTML = `<div class="ops-feed-type" style="color:#22d3ee">LIVE · ${label}</div><div class="ops-feed-route">${flight.flightIata} · ${flight.origin.name.split('(')[0]} → ${flight.dest.name.split('(')[0]}</div><div class="ops-feed-tx"><a href="https://sepolia.basescan.org/tx/${txData.txHash}" target="_blank">TX: ${txData.txHash?.slice(0,10)}...${txData.txHash?.slice(-6)}</a></div>`;
+      card.innerHTML = `<div class="ops-feed-type" style="color:#22d3ee">LIVE · ${logistixHtml(label)}</div><div class="ops-feed-route">${logistixHtml(flight.flightIata)} · ${logistixHtml(flight.origin.name.split('(')[0])} → ${logistixHtml(flight.dest.name.split('(')[0])}</div><div class="ops-feed-tx"><a href="https://sepolia.basescan.org/tx/${logistixTx(txData.txHash)}" target="_blank">TX: ${logistixHtml(txData.txHash?.slice(0,10))}...${logistixHtml(txData.txHash?.slice(-6))}</a></div>`;
       card.onclick = () => openFlightSidebar(flight);
       feedEl.appendChild(card);
       feedEl.scrollLeft = feedEl.scrollWidth;
@@ -420,7 +425,7 @@ async function scanFlights() {
       const depLocal = c.dep_time ? c.dep_time.split(' ')[1] : '';
       const gate = c.dep_gate ? ` G${c.dep_gate}` : '';
       const term = c.dep_terminal ? ` T${c.dep_terminal}` : '';
-      return `<option value='${JSON.stringify(c).replace(/'/g, "&#39;")}'>${c.flight_iata} → ${c.arr_iata} · ${depLocal} (${when})${term}${gate} · ${c.airline_iata || ''}</option>`;
+      return `<option value='${logistixHtml(JSON.stringify(c))}'>${logistixHtml(c.flight_iata)} → ${logistixHtml(c.arr_iata)} · ${logistixHtml(depLocal)} (${logistixHtml(when)})${logistixHtml(term)}${logistixHtml(gate)} · ${logistixHtml(c.airline_iata || '')}</option>`;
     }).join('');
 
   select.onchange = () => {
