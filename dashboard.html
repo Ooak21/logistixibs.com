@@ -931,6 +931,8 @@ function animateAlongPath(pathPts, dur) {
 }
 
 async function startSimulation() {
+  const operator = await (await import('./auth.js')).authGuard();
+  if (!operator) return;
   const btn = document.getElementById('simBtn');
   btn.disabled = true;
 
